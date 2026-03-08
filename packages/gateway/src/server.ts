@@ -718,11 +718,13 @@ export class GatewayServer {
             return;
           }
         }
-        const mode = params.get('hub.mode') || '';
-        const token = params.get('hub.verify_token') || '';
-        const challenge = params.get('hub.challenge') || '';
+        const mode = (params.get('hub.mode') || '').slice(0, 64);
+        const token = (params.get('hub.verify_token') || '').slice(0, 512);
+        const rawChallenge = params.get('hub.challenge') || '';
+        const challenge = rawChallenge.length > 0 && rawChallenge.length <= 512
+          && /^[\x20-\x7e]*$/.test(rawChallenge) ? rawChallenge : '';
         const verified = this.channelRunner?.verifyWebhook?.(channelId, mode, token, challenge);
-        if (verified !== null && verified !== undefined) {
+        if (verified !== null && verified !== undefined && typeof verified === 'string') {
           res.writeHead(200, { 'Content-Type': 'text/plain' });
           res.end(verified);
         } else {

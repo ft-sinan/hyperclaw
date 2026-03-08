@@ -108,14 +108,21 @@ interface ResolvedAccount {
 const STATE_FILE = path.join(os.homedir(), '.hyperclaw', 'mattermost-state.json');
 const HMAC_INTERACTIONS_KEY = 'openclaw-mattermost-interactions';
 const WS_RECONNECT_DELAY_MS = 5000;
-const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const UNSAFE_KEYS = new Set([
+  '__proto__', 'prototype', 'constructor',
+  '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__',
+  'hasOwnProperty', 'valueOf', 'toString', 'toJSON'
+]);
 
 function createSafeRecord<T>(): Record<string, T> {
   return Object.create(null) as Record<string, T>;
 }
 
 function isSafeKey(key: string): boolean {
-  return !!key && !UNSAFE_KEYS.has(key);
+  if (!key || typeof key !== 'string') return false;
+  if (UNSAFE_KEYS.has(key) || key.includes('__') || key.includes('.')) return false;
+  // Only allow alphanumeric, underscore, hyphen (typical webhook/slash payload keys)
+  return /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(key);
 }
 
 function sanitizeForLog(value: unknown): string {
@@ -374,8 +381,10 @@ class SingleAccountConnector extends EventEmitter {
         this._emit(userId, channelId, text, senderName, postId, true);
         return;
       }
-      const upper = text.trim().toUpperCase();
-      if (acc.pendingPairings[upper]) {
+      const raw = text.trim().toUpperCase();
+      // Only allow alphanumeric codes — prevents remote property injection (e.g. __proto__)
+      const upper = /^[A-Z0-9]{4,12}$/.test(raw) ? raw : '';
+      if (upper && acc.pendingPairings[upper]) {
         acc.approvedPairings.push(userId);
         delete acc.pendingPairings[upper];
         await this._saveState();

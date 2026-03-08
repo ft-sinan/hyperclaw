@@ -166,7 +166,8 @@ function postToSynology(incomingUrl: string, text: string, userId?: string, allo
     };
 
     if (isHttps && allowInsecureSsl) {
-      (options as https.RequestOptions).rejectUnauthorized = false; // lgtm[js/disabling-certificate-validation]
+      // codeql[js/disabling-certificate-validation] — NAS self-signed certs, gated by allowInsecureSsl
+      (options as https.RequestOptions).rejectUnauthorized = false;
     }
 
     const req = (isHttps ? https : http).request(options, (res) => {

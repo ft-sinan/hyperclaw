@@ -28,13 +28,12 @@ async function readValidatedImageFile(filePath: string): Promise<{ data: string;
   if (!ALLOWED_IMAGE_EXTENSIONS.has(ext)) {
     throw new Error(`Unsupported image file type: ${ext || 'unknown'}`);
   }
-  const stats = await fs.stat(resolvedPath);
-  if (!stats.isFile()) throw new Error('Image input must be a file');
-  if (stats.size === 0) throw new Error('Image input is empty');
-  if (stats.size > MAX_IMAGE_BYTES) {
+  // Single read — validate from buffer to avoid TOCTOU race (stat then readFile)
+  const buf = await fs.readFile(resolvedPath);
+  if (buf.length === 0) throw new Error('Image input is empty');
+  if (buf.length > MAX_IMAGE_BYTES) {
     throw new Error(`Image input exceeds ${MAX_IMAGE_BYTES} bytes`);
   }
-  const buf = await fs.readFile(resolvedPath);
   return { data: buf.toString('base64'), mediaType: inferImageMediaType(ext) };
 }
 

@@ -16,7 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [5.2.6] — 2026-03-06
+## [5.2.6] — 2026-03-05
 
 ### Security (CodeQL)
 - **44+ CodeQL alerts fixed** across the codebase

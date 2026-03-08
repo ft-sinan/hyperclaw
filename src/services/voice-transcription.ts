@@ -42,14 +42,13 @@ async function loadAudioInput(audioPathOrBuffer: string | Buffer): Promise<Buffe
     throw new Error(`Unsupported audio file type: ${ext || 'unknown'}`);
   }
 
-  const stats = await fs.stat(resolvedPath);
-  if (!stats.isFile()) throw new Error('Audio input must be a file');
-  if (stats.size === 0) throw new Error('Audio input is empty');
-  if (stats.size > MAX_AUDIO_BYTES) {
+  // Single read — validate from buffer to avoid TOCTOU race (stat then readFile)
+  const buf = await fs.readFile(resolvedPath);
+  if (buf.length === 0) throw new Error('Audio input is empty');
+  if (buf.length > MAX_AUDIO_BYTES) {
     throw new Error(`Audio input exceeds ${MAX_AUDIO_BYTES} bytes`);
   }
-
-  return fs.readFile(resolvedPath);
+  return buf;
 }
 
 async function getConfig(): Promise<{ providerId?: string; apiKey?: string }> {
