@@ -1,33 +1,146 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HyperClaw Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>body{background:#0f172a;color:#e2e8f0;font-family:system-ui}</style>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#090e1a;--bg2:#0d1526;--bg3:#111d33;--border:#1e2d4a;
+      --accent:#00c2ff;--accent2:#0077b6;--text:#e2eaf8;--text2:#8ba0c0;
+      --card:#0d1829;--shadow:0 4px 24px rgba(0,194,255,0.07);
+    }
+    [data-theme="light"] {
+      --bg:#eef4ff;--bg2:#dde8ff;--bg3:#ffffff;--border:#b8cdf0;
+      --accent:#0077b6;--accent2:#005f99;--text:#0d1d3a;--text2:#3a5580;
+      --card:#ffffff;--shadow:0 4px 24px rgba(0,119,182,0.10);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+    .header{background:rgba(9,14,26,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
+    [data-theme="light"] .header{background:rgba(238,244,255,.97)}
+    .logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;letter-spacing:2px;background:linear-gradient(90deg,var(--accent),#7dd4fc,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .btn-icon{background:var(--bg3);border:1px solid var(--border);color:var(--text2);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;margin-left:auto}
+    .btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+    .main{max-width:960px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+    .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+    .stat-row:last-child{border:none}
+    .stat-label{color:var(--text2)}
+    .stat-val{font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .badge-green{background:rgba(34,197,94,.15);color:#22c55e}
+    .badge-red{background:rgba(239,68,68,.15);color:#ef4444}
+    .badge-blue{background:rgba(0,194,255,.12);color:var(--accent)}
+    .link-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);text-decoration:none;color:var(--text);font-size:13px;transition:all .2s;margin-bottom:8px}
+    .link-row:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,.05)}
+    .pulse{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:p 2s infinite;flex-shrink:0}
+    .pulse.off{background:#ef4444;box-shadow:0 0 6px #ef4444;animation:none}
+    @keyframes p{0%,100%{box-shadow:0 0 4px #22c55e}50%{box-shadow:0 0 12px #22c55e}}
+    .hero{grid-column:1/-1;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 28px;display:flex;align-items:center;gap:20px;box-shadow:var(--shadow)}
+    .hero-logo{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:clamp(24px,5vw,44px);letter-spacing:3px;background:linear-gradient(135deg,#7dd4fc,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+    .hero-sub{font-size:13px;color:var(--text2);margin-top:6px}
+  </style>
 </head>
-<body class="min-h-screen p-8">
-  <h1 class="text-2xl font-bold text-cyan-400 mb-6">🦅 HyperClaw Dashboard</h1>
-  <div id="content" class="grid gap-4 md:grid-cols-2 max-w-4xl">
-    <div class="bg-slate-800 rounded-lg p-4">
-      <h2 class="text-lg font-semibold text-cyan-300 mb-2">Gateway</h2>
-      <pre id="status" class="text-sm text-slate-300 overflow-auto">Loading...</pre>
+<body>
+
+<div class="header">
+  <span style="font-size:26px;filter:drop-shadow(0 0 8px var(--accent))">🦅</span>
+  <span class="logo">HYPERCLAW</span>
+  <span style="font-size:12px;color:var(--text2);margin-left:4px">Dashboard</span>
+  <button class="btn-icon" id="theme-btn" title="Toggle theme">🌙</button>
+</div>
+
+<div class="main">
+  <!-- Hero -->
+  <div class="hero">
+    <div>
+      <div class="hero-logo">HYPERCLAW</div>
+      <div class="hero-sub">AI Gateway Platform &nbsp;·&nbsp; <span id="hero-model">—</span> &nbsp;·&nbsp; Agent: <span id="hero-agent">—</span></div>
     </div>
-    <div class="bg-slate-800 rounded-lg p-4">
-      <h2 class="text-lg font-semibold text-cyan-300 mb-2">Quick links</h2>
-      <ul class="space-y-2 text-cyan-400">
-        <li><a href="/chat" class="hover:underline">/chat</a> — Web chat</li>
-        <li><a href="/api/status" class="hover:underline">/api/status</a> — API status</li>
-      </ul>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <div class="pulse off" id="hero-pulse"></div>
+      <span id="hero-status" style="font-size:13px;color:var(--text2)">Connecting…</span>
     </div>
   </div>
-  <script>
-    const port = location.port || 18789;
-    const apiUrl = `http://${location.hostname}:${port}`;
+
+  <!-- Gateway status -->
+  <div class="card">
+    <div class="card-title">⚡ Gateway</div>
+    <div class="stat-row"><span class="stat-label">Status</span><span class="stat-val" id="gw-running"><span class="badge badge-red">Stopped</span></span></div>
+    <div class="stat-row"><span class="stat-label">Port</span><span class="stat-val" id="gw-port">—</span></div>
+    <div class="stat-row"><span class="stat-label">Uptime</span><span class="stat-val" id="gw-uptime">—</span></div>
+    <div class="stat-row"><span class="stat-label">Sessions</span><span class="stat-val" id="gw-sessions">—</span></div>
+    <div class="stat-row"><span class="stat-label">Channels</span><span class="stat-val" id="gw-channels">—</span></div>
+  </div>
+
+  <!-- AI info -->
+  <div class="card">
+    <div class="card-title">🤖 Agent</div>
+    <div class="stat-row"><span class="stat-label">Name</span><span class="stat-val" id="ai-agent">—</span></div>
+    <div class="stat-row"><span class="stat-label">Model</span><span class="stat-val" id="ai-model">—</span></div>
+    <div class="stat-row"><span class="stat-label">Provider</span><span class="stat-val" id="ai-provider">—</span></div>
+    <div class="stat-row"><span class="stat-label">Version</span><span class="stat-val" id="ai-version">—</span></div>
+  </div>
+
+  <!-- Quick links -->
+  <div class="card">
+    <div class="card-title">🔗 Quick links</div>
+    <a class="link-row" href="/chat"><span>💬</span><span>Web Chat</span><span style="margin-left:auto;font-size:11px;color:var(--text2)">/chat</span></a>
+    <a class="link-row" href="/api/status" target="_blank"><span>📊</span><span>API Status (JSON)</span><span style="margin-left:auto;font-size:11px;color:var(--text2)">/api/status</span></a>
+    <a class="link-row" href="/api/canvas/state" target="_blank"><span>🎨</span><span>Canvas State</span><span style="margin-left:auto;font-size:11px;color:var(--text2)">/api/canvas/state</span></a>
+  </div>
+
+  <!-- Commands -->
+  <div class="card">
+    <div class="card-title">⌨️ CLI commands</div>
+    <div class="stat-row"><span class="stat-label" style="font-family:'JetBrains Mono',monospace;font-size:11px">hyperclaw chat</span><span class="badge badge-blue">Terminal</span></div>
+    <div class="stat-row"><span class="stat-label" style="font-family:'JetBrains Mono',monospace;font-size:11px">hyperclaw status</span><span class="badge badge-blue">Status</span></div>
+    <div class="stat-row"><span class="stat-label" style="font-family:'JetBrains Mono',monospace;font-size:11px">hyperclaw health</span><span class="badge badge-blue">Health</span></div>
+    <div class="stat-row"><span class="stat-label" style="font-family:'JetBrains Mono',monospace;font-size:11px">hyperclaw osint</span><span class="badge badge-blue">OSINT</span></div>
+    <div class="stat-row"><span class="stat-label" style="font-family:'JetBrains Mono',monospace;font-size:11px">hyperclaw hub</span><span class="badge badge-blue">Skills</span></div>
+  </div>
+</div>
+
+<script>
+  const apiUrl = `http://${location.hostname}:${location.port || 18789}`;
+  const themeBtn = document.getElementById('theme-btn');
+  let dark = true;
+  themeBtn.onclick = () => {
+    dark = !dark;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    themeBtn.textContent = dark ? '🌙' : '☀️';
+  };
+
+  function load() {
     fetch(apiUrl + '/api/status').then(r => r.json()).then(d => {
-      document.getElementById('status').textContent = JSON.stringify(d, null, 2);
-    }).catch(() => document.getElementById('status').textContent = 'Gateway unreachable');
-  </script>
+      const running = d.running;
+      document.getElementById('gw-running').innerHTML = running
+        ? '<span class="badge badge-green">Running</span>'
+        : '<span class="badge badge-red">Stopped</span>';
+      document.getElementById('gw-port').textContent = d.port || '—';
+      document.getElementById('gw-uptime').textContent = d.uptime || '—';
+      document.getElementById('gw-sessions').textContent = d.sessions ?? '—';
+      document.getElementById('gw-channels').textContent = (d.channels?.length || d.channels) ?? '0';
+      document.getElementById('ai-agent').textContent = d.agentName || '—';
+      document.getElementById('ai-model').textContent = d.model || '—';
+      document.getElementById('ai-provider').textContent = d.provider || '—';
+      document.getElementById('ai-version').textContent = d.version || '—';
+      document.getElementById('hero-model').textContent = d.model || '—';
+      document.getElementById('hero-agent').textContent = d.agentName || '—';
+      const pulse = document.getElementById('hero-pulse');
+      const status = document.getElementById('hero-status');
+      if (running) { pulse.classList.remove('off'); status.textContent = 'Running'; status.style.color = '#22c55e'; }
+      else { pulse.classList.add('off'); status.textContent = 'Stopped'; status.style.color = '#ef4444'; }
+    }).catch(() => {
+      document.getElementById('hero-status').textContent = 'Unreachable';
+    });
+  }
+  load();
+  setInterval(load, 5000);
+</script>
 </body>
 </html>
