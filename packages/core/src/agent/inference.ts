@@ -1331,22 +1331,24 @@ export function getBuiltinTools(): Tool[] {
         const { execFile } = await import('child_process');
         const { promisify } = await import('util');
         const exec = promisify(execFile);
+        /** Escape a string for safe embedding inside an AppleScript string literal. */
+        const asStr = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '').replace(/\n/g, '\\n');
         const action = input.action as string;
         if (action === 'create') {
-          const title = (input.title as string || 'New Note').replace(/"/g, '\\"');
-          const body = (input.body as string || '').replace(/"/g, '\\"');
+          const title = asStr(input.title as string || 'New Note');
+          const body = asStr(input.body as string || '');
           const script = `tell application "Notes"\nset newNote to make new note at default account with properties {name:"${title}", body:"${title}\\n${body}"}\nreturn name of newNote\nend tell`;
           try { const r = await exec('osascript', ['-e', script]); return `Created note: ${r.stdout.trim()}`; }
           catch (e: any) { return `Error: ${e.message}`; }
         }
         if (action === 'list') {
-          const lim = parseInt((input.limit as string) || '10');
+          const lim = Math.max(1, Math.min(100, parseInt((input.limit as string) || '10') || 10));
           const script = `tell application "Notes"\nset out to {}\nrepeat with n in (notes 1 thru ${lim} of default account)\nset end of out to name of n\nend repeat\nreturn out\nend tell`;
           try { const r = await exec('osascript', ['-e', script]); return r.stdout.trim() || 'No notes found.'; }
           catch (e: any) { return `Error: ${e.message}`; }
         }
         if (action === 'search') {
-          const q = (input.query as string || '').replace(/"/g, '\\"');
+          const q = asStr(input.query as string || '');
           const script = `tell application "Notes"\nset out to {}\nrepeat with n in notes of default account\nif name of n contains "${q}" or body of n contains "${q}" then\nset end of out to name of n\nend if\nend repeat\nreturn out\nend tell`;
           try { const r = await exec('osascript', ['-e', script]); return r.stdout.trim() || 'No matching notes.'; }
           catch (e: any) { return `Error: ${e.message}`; }
@@ -1380,19 +1382,21 @@ export function getBuiltinTools(): Tool[] {
           try { const r = await exec('osascript', ['-e', script]); return r.stdout.trim() || 'No lists found.'; }
           catch (e: any) { return `Error: ${e.message}`; }
         }
+        /** Escape a string for safe embedding inside an AppleScript string literal. */
+        const asEsc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '').replace(/\n/g, '\\n');
         if (action === 'add') {
           if (!input.title) return 'title is required';
-          const title = (input.title as string).replace(/"/g, '\\"');
-          const listName = ((input.list as string) || 'Reminders').replace(/"/g, '\\"');
+          const title = asEsc(input.title as string);
+          const listName = asEsc((input.list as string) || 'Reminders');
           const script = `tell application "Reminders"\ntell list "${listName}"\nmake new reminder with properties {name:"${title}"}\nend tell\nend tell`;
           try { await exec('osascript', ['-e', script]); return `Reminder "${title}" added to ${listName}.`; }
           catch (e: any) { return `Error: ${e.message}`; }
         }
         if (action === 'list') {
-          const lim = parseInt((input.limit as string) || '20');
+          const lim = Math.max(1, Math.min(200, parseInt((input.limit as string) || '20') || 20));
           const listName = input.list as string;
           const script = listName
-            ? `tell application "Reminders"\nset out to {}\nrepeat with r in reminders of list "${listName.replace(/"/g, '\\"')}"\nif completed of r is false then set end of out to name of r\nend repeat\nreturn out\nend tell`
+            ? `tell application "Reminders"\nset out to {}\nrepeat with r in reminders of list "${asEsc(listName)}"\nif completed of r is false then set end of out to name of r\nend repeat\nreturn out\nend tell`
             : `tell application "Reminders"\nset out to {}\nrepeat with r in (reminders whose completed is false)\nset end of out to name of r\nif (count of out) >= ${lim} then exit repeat\nend repeat\nreturn out\nend tell`;
           try { const r = await exec('osascript', ['-e', script]); return r.stdout.trim() || 'No pending reminders.'; }
           catch (e: any) { return `Error: ${e.message}`; }
@@ -1881,17 +1885,19 @@ export function getBuiltinTools(): Tool[] {
         const { execFile } = await import('child_process');
         const { promisify } = await import('util');
         const exec = promisify(execFile);
+        /** Escape a string for safe embedding inside an AppleScript string literal. */
+        const asEscMsg = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '').replace(/\n/g, '\\n');
         const action = input.action as string;
         if (action === 'send') {
           if (!input.to || !input.message) return 'to and message are required';
-          const to = (input.to as string).replace(/"/g, '\\"');
-          const msg = (input.message as string).replace(/"/g, '\\"');
+          const to = asEscMsg(input.to as string);
+          const msg = asEscMsg(input.message as string);
           const script = `tell application "Messages"\nset targetBuddy to "${to}"\nset targetService to first service whose service type = iMessage\nset targetBuddy to buddy targetBuddy of targetService\nsend "${msg}" to targetBuddy\nend tell`;
           try { await exec('osascript', ['-e', script]); return `iMessage sent to ${input.to}.`; }
           catch (e: any) { return `Error: ${e.message}\nMake sure Messages.app is signed in and has accessibility permissions.`; }
         }
         if (action === 'list_conversations') {
-          const lim = parseInt((input.limit as string) || '10');
+          const lim = Math.max(1, Math.min(50, parseInt((input.limit as string) || '10') || 10));
           const script = `tell application "Messages"\nset out to {}\nrepeat with c in (chats 1 thru ${lim})\nset end of out to name of c\nend repeat\nreturn out\nend tell`;
           try { const r = await exec('osascript', ['-e', script]); return r.stdout.trim() || 'No conversations found.'; }
           catch (e: any) { return `Error: ${e.message}`; }

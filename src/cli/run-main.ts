@@ -1590,7 +1590,9 @@ authCmd.command('add <service_id>')
     let envContent = '';
     if (await fs.pathExists(envPath)) envContent = await fs.readFile(envPath, 'utf8');
     const envLine = `${envVar}=${apiKey}`;
-    const re = new RegExp(`^${envVar}=.*$`, 'm');
+    // Escape envVar so user-supplied characters can't inject regex syntax
+    const escapedEnvVar = envVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`^${escapedEnvVar}=.*$`, 'm');
     if (re.test(envContent)) envContent = envContent.replace(re, envLine);
     else envContent = envContent.trimEnd() + (envContent ? '\n' : '') + envLine + '\n';
     await fs.writeFile(envPath, envContent, { mode: 0o600 });

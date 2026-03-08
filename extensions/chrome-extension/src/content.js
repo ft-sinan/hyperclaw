@@ -62,7 +62,12 @@
     `;
     document.head.appendChild(style);
 
-    toast.innerHTML = `<span>🦅</span><span>${message}</span>`;
+    const eagle = document.createElement('span');
+    eagle.textContent = '🦅';
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(eagle);
+    toast.appendChild(text);
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), duration);
   }

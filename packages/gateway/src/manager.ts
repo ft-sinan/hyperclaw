@@ -93,10 +93,15 @@ export class GatewayManager {
   async applyTailscaleExposure(exposure: TailscaleExposure, port: number): Promise<void> {
     if (exposure === 'off') return;
     try {
+      // Validate port is a safe integer before using in shell command
+      const safePort = Math.trunc(Number(port));
+      if (!Number.isInteger(safePort) || safePort < 1 || safePort > 65535) {
+        throw new Error(`Invalid port: ${port}`);
+      }
       if (exposure === 'serve') {
-        await execAsync(`tailscale serve ${port}`);
+        await execAsync(`tailscale serve ${safePort}`);
       } else if (exposure === 'funnel') {
-        await execAsync(`tailscale funnel ${port}`);
+        await execAsync(`tailscale funnel ${safePort}`);
       }
     } catch {
       console.log(chalk.yellow('⚠️  Tailscale exposure failed — check tailscale is running'));

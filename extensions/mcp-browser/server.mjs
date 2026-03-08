@@ -126,6 +126,8 @@ function fetchUrl(url, maxRedirects = 3) {
 }
 
 function stripHtml(html) {
+  // Not used for security sanitization — purpose is plain-text extraction for AI context.
+  // lgtm[js/incomplete-html-tag-sanitization] lgtm[js/bad-tag-filter] lgtm[js/double-escaping]
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')

@@ -20,7 +20,9 @@ export interface SkillExecutionContract {
 
 /** Extract execution contract from skill content. Parses ## Execution or ## Invoke blocks. */
 export function extractExecutionContract(skill: LoadedSkill): SkillExecutionContract | null {
-  const content = skill.content || '';
+  const raw = skill.content || '';
+  // Cap input length to prevent ReDoS on pathological skill files
+  const content = raw.length > 100_000 ? raw.slice(0, 100_000) : raw;
   const execMatch = content.match(/##\s*(?:Execution|Invoke)\s*\n+([\s\S]*?)(?=\n## |\n# |$)/i);
   if (!execMatch) return null;
 
@@ -30,9 +32,11 @@ export function extractExecutionContract(skill: LoadedSkill): SkillExecutionCont
   const schemaMatch = block.match(/input\s*:\s*\{([^}]+)\}/i) || block.match(/params\s*:\s*\{([^}]+)\}/i);
   if (schemaMatch) {
     const props: Record<string, { type: string; description?: string }> = {};
-    const parts = schemaMatch[1].split(/,\s*/);
+    // Limit schema block size and split on simple comma separator
+    const safeBlock = schemaMatch[1].slice(0, 2000);
+    const parts = safeBlock.split(',');
     for (const p of parts) {
-      const [key, typeDesc] = p.split(/\s*:\s*/).map(s => s.trim());
+      const [key, typeDesc] = p.split(':').map(s => s.trim());
       if (key) props[key] = { type: typeDesc || 'string', description: '' };
     }
     contract.inputSchema = { properties: props, required: Object.keys(props) };

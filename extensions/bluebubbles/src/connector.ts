@@ -23,9 +23,12 @@ export interface BlueBubblesConfig {
   allowFrom: string[];
   approvedPairings: string[];
   pendingPairings: Record<string, string>;
+  /** Allow self-signed TLS certificates from the BlueBubbles server. Default: false.
+   *  Set to true only if your BB server uses a self-signed cert and you trust the network. */
+  allowInsecureSsl?: boolean;
 }
 
-function bbReq(serverUrl: string, password: string, method: string, endpoint: string, body?: object): Promise<any> {
+function bbReq(serverUrl: string, password: string, method: string, endpoint: string, body?: object, allowInsecureSsl = false): Promise<any> {
   return new Promise((resolve, reject) => {
     const url = new URL(`${serverUrl}/api/v1${endpoint}`);
     url.searchParams.set('password', password);
@@ -39,7 +42,7 @@ function bbReq(serverUrl: string, password: string, method: string, endpoint: st
       path: url.pathname + url.search,
       method,
       headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
-      rejectUnauthorized: false // self-signed cert common for local BB server
+      ...(isHttps && allowInsecureSsl ? { rejectUnauthorized: false } : {})
     }, (res: any) => {
       let data = '';
       res.on('data', (c: Buffer) => data += c);
@@ -66,7 +69,7 @@ export class BlueBubblesConnector extends EventEmitter {
   }
 
   async connect(): Promise<void> {
-    const info = await bbReq(this.config.serverUrl, this.config.password, 'GET', '/server/info');
+    const info = await bbReq(this.config.serverUrl, this.config.password, 'GET', '/server/info', undefined, this.config.allowInsecureSsl);
     await this.loadState();
     this.running = true;
     console.log(chalk.green(`  🦅 BlueBubbles (iMessage): ${info?.os_version || 'macOS'} server connected`));
@@ -77,7 +80,9 @@ export class BlueBubblesConnector extends EventEmitter {
   private connectWebSocket(): void {
     const url = new URL(this.config.serverUrl);
     const wsUrl = `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.hostname}:${url.port || 1234}`;
-    this.ws = new WebSocket(`${wsUrl}?password=${encodeURIComponent(this.config.password)}`, { rejectUnauthorized: false });
+    this.ws = new WebSocket(`${wsUrl}?password=${encodeURIComponent(this.config.password)}`, {
+      ...(this.config.allowInsecureSsl ? { rejectUnauthorized: false } : {})
+    });
 
     this.ws.on('message', async (data) => {
       try {

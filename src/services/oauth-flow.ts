@@ -97,8 +97,10 @@ export async function runOAuthFlow(
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       if (error) {
+        // HTML-escape to prevent reflected XSS from the OAuth provider error param
+        const safeError = String(error).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         res.writeHead(400);
-        res.end(`<h1>OAuth error</h1><p>${error}</p><p>You can close this tab.</p>`);
+        res.end(`<h1>OAuth error</h1><p>${safeError}</p><p>You can close this tab.</p>`);
         server.close();
         reject(new Error(`OAuth error: ${error}`));
         return;

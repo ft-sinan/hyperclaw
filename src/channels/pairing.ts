@@ -53,8 +53,22 @@ export interface AllowFromStore {
 // ---------------------------------------------------------------------------
 
 function generateCode(): string {
-  const bytes = crypto.randomBytes(CODE_LENGTH);
-  return Array.from(bytes).map(b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+  const alphabetLen = CODE_ALPHABET.length; // 32 — power of 2, so no modulo bias
+  const result: string[] = [];
+  // Draw bytes with rejection sampling to fully eliminate modulo bias.
+  // 256 % 32 === 0, so in this specific case bias is already zero, but the
+  // explicit rejection loop makes the intent clear and keeps CodeQL satisfied.
+  const limit = 256 - (256 % alphabetLen);
+  while (result.length < CODE_LENGTH) {
+    const batch = crypto.randomBytes(CODE_LENGTH * 2);
+    for (const b of batch) {
+      if (b < limit) {
+        result.push(CODE_ALPHABET[b % alphabetLen]);
+        if (result.length === CODE_LENGTH) break;
+      }
+    }
+  }
+  return result.join('');
 }
 
 // ---------------------------------------------------------------------------

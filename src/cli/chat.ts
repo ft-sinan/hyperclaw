@@ -69,7 +69,8 @@ async function printSkills(): Promise<void> {
 }
 
 function makeSessionId(): string {
-  return Math.random().toString(36).slice(2, 9);
+  const { randomBytes } = require('crypto');
+  return randomBytes(5).toString('hex');
 }
 
 export async function runChat(opts: {

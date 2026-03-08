@@ -78,6 +78,8 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
           const scriptPath = path.join(os.tmpdir(), `hyperclaw-run-${Date.now()}.sh`);
           try {
             const absCwd = path.resolve(cwd.replace(/^~/, os.homedir()));
+            // Reject paths with special chars that could break the docker -v argument
+            if (/[`$\\!?*{}\[\]|;&<>]/.test(absCwd)) throw new Error('Working directory contains unsafe characters');
             await fs.writeFile(scriptPath, `#!/bin/sh\n${cmd}\n`, { mode: 0o700 });
             const dockerCmd = `docker run --rm -v "${absCwd}:/workspace" -v "${scriptPath}:/script.sh" -w /workspace alpine sh /script.sh`;
             const { stdout, stderr } = await execAsync(dockerCmd, {
@@ -384,7 +386,10 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
           : 'xdg-open';
 
         try {
-          await execAsync(`${openCmd} "${target.replace(/"/g, '\\"')}"`, { timeout: 5000 });
+          // Use execFile with argument array to avoid shell injection from target
+          const { execFile } = await import('child_process');
+          const { promisify } = await import('util');
+          await promisify(execFile)(openCmd, [target], { timeout: 5000 });
           const result = `Opened: ${target}`;
           await logAction('open', { target }, result);
           return result;
@@ -423,13 +428,27 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
 
         if (action === 'write' && input.content) {
           const content = input.content as string;
-          const cmd = process.platform === 'darwin'
-            ? `echo "${content.replace(/"/g, '\\"')}" | pbcopy`
-            : process.platform === 'linux'
-            ? `echo "${content.replace(/"/g, '\\"')}" | xclip -selection clipboard`
-            : `powershell Set-Clipboard "${content.replace(/"/g, '\\"')}"`;
+          const { execFile } = await import('child_process');
+          const { promisify } = await import('util');
+          const execFileAsync = promisify(execFile);
           try {
-            await execAsync(cmd, { timeout: 5000 });
+            if (process.platform === 'darwin') {
+              // Pass content as stdin via spawn to avoid any shell injection
+              await new Promise<void>((res, rej) => {
+                const proc = require('child_process').spawn('pbcopy', [], { stdio: ['pipe', 'ignore', 'ignore'] });
+                proc.stdin.end(content, 'utf8');
+                proc.on('close', (code: number) => code === 0 ? res() : rej(new Error(`pbcopy exit ${code}`)));
+              });
+            } else if (process.platform === 'linux') {
+              await new Promise<void>((res, rej) => {
+                const proc = require('child_process').spawn('xclip', ['-selection', 'clipboard'], { stdio: ['pipe', 'ignore', 'ignore'] });
+                proc.stdin.end(content, 'utf8');
+                proc.on('close', (code: number) => code === 0 ? res() : rej(new Error(`xclip exit ${code}`)));
+              });
+            } else {
+              // Windows: use PowerShell with Set-Clipboard and pass content as arg to avoid shell injection
+              await execFileAsync('powershell', ['-NoProfile', '-Command', 'Set-Clipboard', '-Value', content], { timeout: 5000 });
+            }
             return `Copied to clipboard: ${content.slice(0, 100)}${content.length > 100 ? '...' : ''}`;
           } catch {
             return 'Error: clipboard write failed';

@@ -13,6 +13,10 @@ on:
       - '!apps/macos/**/*.md'
       - '!apps/macos/docs/**'
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   test:
     runs-on: macos-latest
