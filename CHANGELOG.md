@@ -16,6 +16,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.2.7] — 2026-03-09
+
+### Security (CodeQL — High priority)
+- **Potential file system race (TOCTOU)** — `vision.ts`, `voice-transcription.ts`: removed stat-then-read pattern; single `readFile` + validate from buffer
+- **Remote property injection** — `mattermost/connector.ts`: strengthened `isSafeKey` (whitelist, prototype pollution vectors); pairing code validated `/^[A-Z0-9]{4,12}$/` before use as object key
+- **User-controlled bypass of security check** — `packages/gateway/server.ts`: hub.mode/token/challenge length-limited and challenge validated (printable only); verified response type-check
+- **Disabling certificate validation** — `synology-chat/connector.ts`: CodeQL suppression comment (gated by `allowInsecureSsl`)
+
+---
+
 ## [5.2.6] — 2026-03-05
 
 ### Security (CodeQL)
