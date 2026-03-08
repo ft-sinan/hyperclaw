@@ -65,12 +65,19 @@ process.on('uncaughtException', (err: Error) => {
   process.exit(1);
 });
 
+function sanitizeForLog(value: unknown): string {
+  return String(value ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[^\x20-\x7e]+/g, '?')
+    .slice(0, 200);
+}
+
 const program = new Command();
 
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.2.5')
+  .version('5.2.6')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -773,7 +780,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.2.5")',
+      version: 'string (e.g. "5.2.6")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -1651,10 +1658,10 @@ authCmd.command('oauth <provider>')
         expires_at,
         token_url: tokenUrl
       });
-      console.log(chalk.hex('#06b6d4')(`\n  ✔  OAuth tokens saved for: ${provider}`));
-      console.log(chalk.gray('  Set in hyperclaw.json: "provider": { "authType": "oauth", "providerId": "' + provider + '" }\n'));
+      console.log(chalk.hex('#06b6d4')(`\n  ✔  OAuth tokens saved for: ${sanitizeForLog(provider)}`));
+      console.log(chalk.gray('  Set in hyperclaw.json: "provider": { "authType": "oauth", "providerId": "' + sanitizeForLog(provider) + '" }\n'));
     } catch (e: any) {
-      console.error(chalk.red('\n  ✖  OAuth failed: ' + e.message + '\n'));
+      console.error(chalk.red('\n  ✖  OAuth failed: ' + sanitizeForLog(e?.message) + '\n'));
       process.exit(1);
     }
     process.exit(0);
@@ -1699,8 +1706,8 @@ authCmd.command('oauth-set <provider>')
       expires_at,
       token_url: opts.tokenUrl || undefined
     });
-    console.log(chalk.hex('#06b6d4')(`\n  ✔  OAuth tokens saved for provider: ${provider}`));
-    console.log(chalk.gray('  Set in hyperclaw.json: "provider": { "authType": "oauth", "providerId": "' + provider + '" }\n'));
+    console.log(chalk.hex('#06b6d4')(`\n  ✔  OAuth tokens saved for provider: ${sanitizeForLog(provider)}`));
+    console.log(chalk.gray('  Set in hyperclaw.json: "provider": { "authType": "oauth", "providerId": "' + sanitizeForLog(provider) + '" }\n'));
     process.exit(0);
   });
 
@@ -2075,7 +2082,7 @@ if (process.argv.length === 2) {
     await runUpdateCheck();
     process.exit(0);
   }).catch((e) => {
-    console.error(e.message);
+    console.error(sanitizeForLog(e?.message));
     process.exit(1);
   });
 }

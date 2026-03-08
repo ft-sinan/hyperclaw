@@ -15,6 +15,8 @@ import chalk from 'chalk';
 import { EventEmitter } from 'events';
 
 const STATE_FILE = path.join(os.homedir(), '.hyperclaw', 'bluebubbles-state.json');
+const MAX_CA_CERT_BYTES = 1024 * 1024;
+const ALLOWED_CA_CERT_EXTENSIONS = new Set(['.pem', '.crt', '.cer']);
 
 export interface BlueBubblesConfig {
   serverUrl: string;   // http://your-mac:1234 or https://...
@@ -23,18 +25,35 @@ export interface BlueBubblesConfig {
   allowFrom: string[];
   approvedPairings: string[];
   pendingPairings: Record<string, string>;
-  /** Allow self-signed TLS certificates from the BlueBubbles server. Default: false.
-   *  Set to true only if your BB server uses a self-signed cert and you trust the network. */
+  /** Deprecated. Insecure TLS bypass is no longer supported. */
   allowInsecureSsl?: boolean;
+  /** Optional PEM CA bundle for private/self-hosted HTTPS BlueBubbles deployments. */
+  caCertPath?: string;
 }
 
-function bbReq(serverUrl: string, password: string, method: string, endpoint: string, body?: object, allowInsecureSsl = false): Promise<any> {
+function loadCaCert(caCertPath?: string): Buffer | undefined {
+  if (!caCertPath) return undefined;
+  const resolved = path.resolve(caCertPath.replace(/^~/, os.homedir()));
+  const ext = path.extname(resolved).toLowerCase();
+  if (!ALLOWED_CA_CERT_EXTENSIONS.has(ext)) {
+    throw new Error(`Unsupported CA certificate file type: ${ext || 'unknown'}`);
+  }
+  const certificate = fs.readFileSync(resolved);
+  if (certificate.length === 0) throw new Error('CA certificate file is empty');
+  if (certificate.length > MAX_CA_CERT_BYTES) {
+    throw new Error(`CA certificate file exceeds ${MAX_CA_CERT_BYTES} bytes`);
+  }
+  return certificate;
+}
+
+function bbReq(serverUrl: string, password: string, method: string, endpoint: string, body?: object, caCertPath?: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const url = new URL(`${serverUrl}/api/v1${endpoint}`);
     url.searchParams.set('password', password);
     const isHttps = url.protocol === 'https:';
     const mod = isHttps ? https : http;
     const payload = body ? JSON.stringify(body) : null;
+    const ca = isHttps ? loadCaCert(caCertPath) : undefined;
 
     const req = (mod as any).request({
       hostname: url.hostname,
@@ -42,7 +61,7 @@ function bbReq(serverUrl: string, password: string, method: string, endpoint: st
       path: url.pathname + url.search,
       method,
       headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
-      ...(isHttps && allowInsecureSsl ? { rejectUnauthorized: false } : {}) // lgtm[js/disabling-certificate-validation]
+      ...(ca ? { ca } : {})
     }, (res: any) => {
       let data = '';
       res.on('data', (c: Buffer) => data += c);
@@ -62,6 +81,7 @@ export class BlueBubblesConnector extends EventEmitter {
   private running = false;
   private ws: WebSocket | null = null;
   private lastMessageTs = 0;
+  private insecureTlsWarned = false;
 
   constructor(config: Partial<BlueBubblesConfig> & { serverUrl: string; password: string }) {
     super();
@@ -69,7 +89,11 @@ export class BlueBubblesConnector extends EventEmitter {
   }
 
   async connect(): Promise<void> {
-    const info = await bbReq(this.config.serverUrl, this.config.password, 'GET', '/server/info', undefined, this.config.allowInsecureSsl);
+    if (this.config.allowInsecureSsl && !this.insecureTlsWarned) {
+      this.insecureTlsWarned = true;
+      console.log(chalk.yellow('  ⚠ BlueBubbles: allowInsecureSsl is ignored. Use HTTP locally or configure caCertPath for private HTTPS.'));
+    }
+    const info = await bbReq(this.config.serverUrl, this.config.password, 'GET', '/server/info', undefined, this.config.caCertPath);
     await this.loadState();
     this.running = true;
     console.log(chalk.green(`  🦅 BlueBubbles (iMessage): ${info?.os_version || 'macOS'} server connected`));
@@ -80,8 +104,9 @@ export class BlueBubblesConnector extends EventEmitter {
   private connectWebSocket(): void {
     const url = new URL(this.config.serverUrl);
     const wsUrl = `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.hostname}:${url.port || 1234}`;
+    const ca = url.protocol === 'https:' ? loadCaCert(this.config.caCertPath) : undefined;
     this.ws = new WebSocket(`${wsUrl}?password=${encodeURIComponent(this.config.password)}`, {
-      ...(this.config.allowInsecureSsl ? { rejectUnauthorized: false } : {}) // lgtm[js/disabling-certificate-validation]
+      ...(ca ? { ca } : {})
     });
 
     this.ws.on('message', async (data) => {
@@ -154,7 +179,7 @@ export class BlueBubblesConnector extends EventEmitter {
       chatGuid: `iMessage;-;${address}`,
       message: text.slice(0, 65536),
       method: 'apple-script'
-    });
+    }, this.config.caCertPath);
   }
 
   disconnect(): void {

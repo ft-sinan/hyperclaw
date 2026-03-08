@@ -16,6 +16,13 @@ export interface TTSOptions {
 const DEFAULT_VOICE = '21m00Tcm4TlvDq8ikWAM'; // Rachel
 const DEFAULT_MODEL = 'eleven_multilingual_v2';
 
+function sanitizeForLog(value: unknown): string {
+  return String(value ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[^\x20-\x7e]+/g, '?')
+    .slice(0, 200);
+}
+
 /**
  * Convert text to speech via ElevenLabs API.
  * Returns base64-encoded MP3 or null on error.
@@ -50,7 +57,7 @@ export async function textToSpeech(
         res.on('end', () => {
           const buf = Buffer.concat(chunks);
           if (res.statusCode !== 200) {
-            console.warn(`[tts] ElevenLabs error ${res.statusCode}: ${buf.slice(0, 200)}`);
+            console.warn(`[tts] ElevenLabs error ${res.statusCode}: ${sanitizeForLog(buf.toString('utf8', 0, 200))}`);
             resolve(null);
             return;
           }
@@ -59,7 +66,7 @@ export async function textToSpeech(
       }
     );
     req.on('error', (e) => {
-      console.warn('[tts] ElevenLabs request error:', e.message);
+      console.warn('[tts] ElevenLabs request error:', sanitizeForLog(e.message));
       resolve(null);
     });
     req.setTimeout(30000, () => {

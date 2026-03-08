@@ -108,6 +108,26 @@ interface ResolvedAccount {
 const STATE_FILE = path.join(os.homedir(), '.hyperclaw', 'mattermost-state.json');
 const HMAC_INTERACTIONS_KEY = 'openclaw-mattermost-interactions';
 const WS_RECONNECT_DELAY_MS = 5000;
+const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function createSafeRecord<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>;
+}
+
+function isSafeKey(key: string): boolean {
+  return !!key && !UNSAFE_KEYS.has(key);
+}
+
+function sanitizeForLog(value: unknown): string {
+  return String(value ?? '').replace(/[\r\n\t]+/g, ' ').slice(0, 200);
+}
+
+function sanitizeAccountId(id: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+    throw new Error(`Mattermost: invalid account id "${sanitizeForLog(id)}"`);
+  }
+  return id;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers — REST API
@@ -160,8 +180,8 @@ function deriveInteractionSecret(botToken: string): string {
 }
 
 function signContext(ctx: Record<string, unknown>, secret: string): string {
-  const sortedKeys = Object.keys(ctx).sort();
-  const payload: Record<string, unknown> = {};
+  const sortedKeys = Object.keys(ctx).filter(isSafeKey).sort();
+  const payload = createSafeRecord<unknown>();
   for (const k of sortedKeys) payload[k] = ctx[k];
   const serialized = JSON.stringify(payload);
   return crypto.createHmac('sha256', secret).update(serialized).digest('hex');
@@ -214,10 +234,11 @@ export function buildButtonAttachments(
 // ---------------------------------------------------------------------------
 
 function resolveAccount(id: string, raw: MattermostAccountConfig, state: { approved: string[]; pending: Record<string, string> }): ResolvedAccount {
+  const safeId = sanitizeAccountId(id);
   const botToken = raw.botToken || raw.token || process.env['MATTERMOST_BOT_TOKEN'] || '';
   const baseUrl = raw.baseUrl || raw.serverUrl || process.env['MATTERMOST_URL'] || '';
   return {
-    id,
+    id: safeId,
     name: raw.name ?? id,
     botToken,
     baseUrl: baseUrl.replace(/\/$/, ''),
@@ -259,7 +280,7 @@ class SingleAccountConnector extends EventEmitter {
   async connect(): Promise<void> {
     const me = await mmApi(this.acc.baseUrl, this.acc.botToken, 'GET', '/api/v4/users/me');
     this.botUserId = me.id;
-    console.log(chalk.green(`  🦅 Mattermost[${this.acc.id}]: connected as @${me.username} → ${this.acc.baseUrl}`));
+    console.log(chalk.green(`  🦅 Mattermost[${sanitizeForLog(this.acc.id)}]: connected as @${sanitizeForLog(me.username)} → ${sanitizeForLog(this.acc.baseUrl)}`));
     this._startWebSocket();
     this.emit('connected', { accountId: this.acc.id, baseUrl: this.acc.baseUrl, botUserId: this.botUserId });
   }
@@ -296,12 +317,12 @@ class SingleAccountConnector extends EventEmitter {
 
     ws.on('close', () => {
       if (!this.reconnecting) return;
-      console.log(chalk.yellow(`  ⚠ Mattermost[${this.acc.id}]: WS closed, reconnecting...`));
+      console.log(chalk.yellow(`  ⚠ Mattermost[${sanitizeForLog(this.acc.id)}]: WS closed, reconnecting...`));
       setTimeout(() => this._startWebSocket(), WS_RECONNECT_DELAY_MS);
     });
 
     ws.on('error', (err: Error) => {
-      console.log(chalk.yellow(`  ⚠ Mattermost[${this.acc.id}]: WS error: ${err.message}`));
+      console.log(chalk.yellow(`  ⚠ Mattermost[${sanitizeForLog(this.acc.id)}]: WS error: ${sanitizeForLog(err.message)}`));
     });
 
     this.reconnecting = true;
@@ -342,7 +363,7 @@ class SingleAccountConnector extends EventEmitter {
     }
     if (acc.dmPolicy === 'allowlist') {
       if (!acc.allowFrom.includes(userId)) {
-        console.log(chalk.gray(`  mattermost[${acc.id}]: drop DM from ${userId} (dmPolicy=allowlist)`));
+        console.log(chalk.gray(`  mattermost[${sanitizeForLog(acc.id)}]: drop DM from ${sanitizeForLog(userId)} (dmPolicy=allowlist)`));
         return;
       }
       this._emit(userId, channelId, text, senderName, postId, true);
@@ -387,7 +408,7 @@ class SingleAccountConnector extends EventEmitter {
           return userId === p;
         });
         if (!match) {
-          console.log(chalk.gray(`  mattermost[${acc.id}]: drop group sender ${userId} (policy=allowlist)`));
+          console.log(chalk.gray(`  mattermost[${sanitizeForLog(acc.id)}]: drop group sender ${sanitizeForLog(userId)} (policy=allowlist)`));
           return;
         }
       }
@@ -399,13 +420,13 @@ class SingleAccountConnector extends EventEmitter {
 
     if (acc.chatmode === 'oncall' || (acc.chatmode !== 'onmessage' && acc.requireMention)) {
       if (!isMentioned) {
-        console.log(chalk.gray(`  mattermost[${acc.id}]: drop channel ${channelId} (missing-mention, chatmode=oncall)`));
+        console.log(chalk.gray(`  mattermost[${sanitizeForLog(acc.id)}]: drop channel ${sanitizeForLog(channelId)} (missing-mention, chatmode=oncall)`));
         return;
       }
     } else if (acc.chatmode === 'onchar') {
       const hasPrefix = acc.oncharPrefixes.some(p => text.startsWith(p));
       if (!hasPrefix && !isMentioned) {
-        console.log(chalk.gray(`  mattermost[${acc.id}]: drop channel ${channelId} (no prefix/mention, chatmode=onchar)`));
+        console.log(chalk.gray(`  mattermost[${sanitizeForLog(acc.id)}]: drop channel ${sanitizeForLog(channelId)} (no prefix/mention, chatmode=onchar)`));
         return;
       }
     }
@@ -430,20 +451,26 @@ class SingleAccountConnector extends EventEmitter {
   // ---- Webhook (legacy outgoing webhook inbound) --------------------------
 
   async handleWebhook(body: string, webhookToken: string): Promise<void> {
-    let params: Record<string, string> = {};
+    const params = createSafeRecord<string>();
     const trimmed = (body || '').trim();
     if (trimmed.startsWith('{')) {
-      try { params = JSON.parse(trimmed); } catch { return; }
+      try {
+        const raw = JSON.parse(trimmed);
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+        for (const [k, v] of Object.entries(raw)) {
+          if (isSafeKey(k)) params[k] = typeof v === 'string' ? v : String(v ?? '');
+        }
+      } catch { return; }
     } else {
       for (const pair of body.split('&')) {
         const eq = pair.indexOf('=');
         const k = eq >= 0 ? decodeURIComponent(pair.slice(0, eq).replace(/\+/g, ' ')) : decodeURIComponent(pair.replace(/\+/g, ' '));
         const v = eq >= 0 ? decodeURIComponent((pair.slice(eq + 1) || '').replace(/\+/g, ' ')) : '';
-        if (k) params[k] = v;
+        if (isSafeKey(k)) params[k] = v;
       }
     }
     if (params.token !== webhookToken) {
-      console.log(chalk.yellow(`  ⚠ Mattermost[${this.acc.id}]: invalid webhook token`));
+      console.log(chalk.yellow(`  ⚠ Mattermost[${sanitizeForLog(this.acc.id)}]: invalid webhook token`));
       return;
     }
     const channelId = params.channel_id;
@@ -460,22 +487,26 @@ class SingleAccountConnector extends EventEmitter {
   // ---- Slash command callback ----------------------------------------------
 
   async handleSlashCommand(payload: Record<string, string>, expectedToken: string): Promise<string | null> {
-    if (payload.token !== expectedToken) {
-      console.log(chalk.yellow(`  ⚠ Mattermost[${this.acc.id}]: slash command token mismatch`));
+    const safePayload = createSafeRecord<string>();
+    for (const [k, v] of Object.entries(payload)) {
+      if (isSafeKey(k)) safePayload[k] = String(v ?? '');
+    }
+    if (safePayload.token !== expectedToken) {
+      console.log(chalk.yellow(`  ⚠ Mattermost[${sanitizeForLog(this.acc.id)}]: slash command token mismatch`));
       return null;
     }
-    const text = (payload.text || '').trim();
-    const userId = payload.user_id || '';
-    const channelId = payload.channel_id || '';
-    const commandName = payload.command || '';
+    const text = (safePayload.text || '').trim();
+    const userId = safePayload.user_id || '';
+    const channelId = safePayload.channel_id || '';
+    const commandName = safePayload.command || '';
     this.emit('slash_command', {
       accountId: this.acc.id,
       command: commandName,
       text,
       userId,
       channelId,
-      senderName: payload.user_name || '',
-      responseUrl: payload.response_url || ''
+      senderName: safePayload.user_name || '',
+      responseUrl: safePayload.response_url || ''
     });
     return null; // gateway handles the response
   }
@@ -499,9 +530,9 @@ class SingleAccountConnector extends EventEmitter {
           auto_complete_hint: '[prompt]',
           auto_complete_desc: cmd.description
         });
-        console.log(chalk.gray(`  mattermost[${acc.id}]: registered /${cmd.trigger}`));
+        console.log(chalk.gray(`  mattermost[${sanitizeForLog(acc.id)}]: registered /${sanitizeForLog(cmd.trigger)}`));
       } catch (e: any) {
-        console.log(chalk.yellow(`  ⚠ mattermost[${acc.id}]: failed to register /${cmd.trigger}: ${e.message}`));
+        console.log(chalk.yellow(`  ⚠ mattermost[${sanitizeForLog(acc.id)}]: failed to register /${sanitizeForLog(cmd.trigger)}: ${sanitizeForLog(e.message)}`));
       }
     }
   }
@@ -603,9 +634,10 @@ class SingleAccountConnector extends EventEmitter {
 
   private async _saveState(): Promise<void> {
     await fs.ensureDir(path.dirname(STATE_FILE));
-    let state: Record<string, any> = {};
+    const safeId = sanitizeAccountId(this.acc.id);
+    let state: Record<string, any> = createSafeRecord<any>();
     try { state = await fs.readJson(STATE_FILE); } catch {}
-    state[this.acc.id] = {
+    state[safeId] = {
       approvedPairings: this.acc.approvedPairings,
       pendingPairings: this.acc.pendingPairings
     };
@@ -615,7 +647,7 @@ class SingleAccountConnector extends EventEmitter {
   async loadState(): Promise<void> {
     try {
       const state = await fs.readJson(STATE_FILE);
-      const s = state[this.acc.id];
+      const s = state?.[sanitizeAccountId(this.acc.id)];
       if (s?.approvedPairings) this.acc.approvedPairings = s.approvedPairings;
       if (s?.pendingPairings) this.acc.pendingPairings = s.pendingPairings;
     } catch {}
@@ -650,7 +682,7 @@ export class MattermostConnector extends EventEmitter {
       };
       const acc = resolveAccount(id, merged, state);
       if (!acc.botToken || !acc.baseUrl) {
-        console.log(chalk.yellow(`  ⚠ Mattermost[${id}]: missing botToken or baseUrl — skipping`));
+        console.log(chalk.yellow(`  ⚠ Mattermost[${sanitizeForLog(id)}]: missing botToken or baseUrl — skipping`));
         continue;
       }
       const conn = new SingleAccountConnector(acc);
@@ -665,7 +697,7 @@ export class MattermostConnector extends EventEmitter {
       conn.on('slash_command', (info: any) => this.emit('slash_command', info));
 
       await conn.connect();
-      this.accounts.set(id, conn);
+      this.accounts.set(acc.id, conn);
     }
   }
 

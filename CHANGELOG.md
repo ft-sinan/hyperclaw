@@ -16,6 +16,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.2.6] — 2026-03-06
+
+### Security (CodeQL)
+- **44+ CodeQL alerts fixed** across the codebase
+- **Workflow permissions** — Added explicit `permissions` to `macos-build.yml` and `secrets-scan.yml`
+- **Certificate validation** — BlueBubbles/Synology: `rejectUnauthorized: false` now gated by config flag `allowInsecureSsl`
+- **Reflected XSS** — OAuth error param HTML-escaped before rendering
+- **Insecure randomness** — `chat.ts` session ID: `Math.random()` → `crypto.randomBytes`; `pairing.ts` pairing code: rejection sampling for unbiased output
+- **RegExp injection** — `run-main.ts` env var escaped before `new RegExp()`
+- **Shell injection** — `pc-access.ts`: notifications and docker sandbox use `execFile` with args; `voice-call`: TTS uses `execFile`; `manager.ts`: port validated before `tailscale serve`
+- **DOM XSS** — `chat-native.html` uses `esc(content)` before `innerHTML`; `chrome-extension/content.js` uses `textContent`
+- **Polynomial ReDoS** — `skill-runtime.ts` input capped at 100K chars; schema parsing simplified
+- **Incomplete string escaping** — `inference.ts` AppleScript tools use full escape helper; `pc-access.ts` contacts tool fixed
+- **Regex injection** — `mcp-filesystem/server.mjs` glob-to-regex properly escapes special chars
+- **Bad HTML filter / multi-char sanitization** — `website-watch-tools.ts`, `mcp-browser/server.mjs` lgtm suppressions (plain-text extraction only)
+- **CodeQL workflow** — Added `.github/workflows/codeql.yml` for JS/TS only (no Swift/Java false positives)
+
+### Fixed
+- Broken emojis and encoding: `apps/macos/README.md` replacement chars → em dashes
+- Unclosed anchor tags: `<a name="top">` → `<a name="top"></a>` in 11 markdown files
+- `READMEbuilt.md` broken emoji in "Chat with streaming"
+
+### Added
+- `SCREENSHOTS.md` — Full screenshot gallery with CLI commands and web UI
+- `README.md` — Banner and OSINT screenshots; link to full gallery
+
+---
+
 ## [5.2.1] — 2026-03-06
 
 ### Fixed

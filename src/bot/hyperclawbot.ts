@@ -30,6 +30,7 @@ import { getHyperClawDir, getConfigPath } from '../infra/paths';
 
 const getBotConfigFile = () => path.join(getHyperClawDir(), 'hyperclawbot.json');
 const getBotPidFile = () => path.join(getHyperClawDir(), 'hyperclawbot.pid');
+const MAX_TELEGRAM_VOICE_BYTES = 25 * 1024 * 1024;
 
 export type BotPlatform = 'telegram' | 'discord';
 
@@ -202,8 +203,17 @@ export class TelegramHyperClawBot {
     const filePath = fileRes.result?.file_path;
     if (!filePath) throw new Error('Could not get file path');
     const url = `https://api.telegram.org/file/bot${this.config.token}/${filePath}`;
-    const res = await axios.get(url, { responseType: 'arraybuffer' });
+    const res = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      maxContentLength: MAX_TELEGRAM_VOICE_BYTES,
+      maxBodyLength: MAX_TELEGRAM_VOICE_BYTES
+    });
     const buffer = Buffer.from(res.data);
+    if (buffer.length === 0) throw new Error('Downloaded voice note is empty');
+    if (buffer.length > MAX_TELEGRAM_VOICE_BYTES) {
+      throw new Error(`Voice note exceeds ${MAX_TELEGRAM_VOICE_BYTES} bytes`);
+    }
     const { transcribeVoiceNote } = await import('../services/voice-transcription');
     return transcribeVoiceNote(buffer);
   }

@@ -9,30 +9,95 @@ import os from 'os';
 import https from 'https';
 import http from 'http';
 
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
+
+function inferImageMediaType(ext: string): string {
+  return {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp'
+  }[ext] ?? 'image/jpeg';
+}
+
+async function readValidatedImageFile(filePath: string): Promise<{ data: string; mediaType: string }> {
+  const resolvedPath = path.resolve(filePath.replace(/^~/, os.homedir()));
+  const ext = path.extname(resolvedPath).toLowerCase();
+  if (!ALLOWED_IMAGE_EXTENSIONS.has(ext)) {
+    throw new Error(`Unsupported image file type: ${ext || 'unknown'}`);
+  }
+  const stats = await fs.stat(resolvedPath);
+  if (!stats.isFile()) throw new Error('Image input must be a file');
+  if (stats.size === 0) throw new Error('Image input is empty');
+  if (stats.size > MAX_IMAGE_BYTES) {
+    throw new Error(`Image input exceeds ${MAX_IMAGE_BYTES} bytes`);
+  }
+  const buf = await fs.readFile(resolvedPath);
+  return { data: buf.toString('base64'), mediaType: inferImageMediaType(ext) };
+}
+
+async function fetchValidatedRemoteImage(urlString: string): Promise<{ data: string; mediaType: string }> {
+  const url = new URL(urlString);
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error(`Unsupported image URL protocol: ${url.protocol}`);
+  }
+
+  const mod = url.protocol === 'https:' ? https : http;
+  const buf = await new Promise<Buffer>((resolve, reject) => {
+    const req = mod.get(url, (res) => {
+      if ((res.statusCode ?? 0) >= 400) {
+        reject(new Error(`Image download failed with status ${res.statusCode}`));
+        res.resume();
+        return;
+      }
+      const contentLength = Number(res.headers['content-length'] ?? 0);
+      if (contentLength > MAX_IMAGE_BYTES) {
+        reject(new Error(`Image download exceeds ${MAX_IMAGE_BYTES} bytes`));
+        res.destroy();
+        return;
+      }
+      const chunks: Buffer[] = [];
+      let total = 0;
+      res.on('data', (c: Buffer) => {
+        total += c.length;
+        if (total > MAX_IMAGE_BYTES) {
+          req.destroy(new Error(`Image download exceeds ${MAX_IMAGE_BYTES} bytes`));
+          return;
+        }
+        chunks.push(c);
+      });
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+    req.on('error', reject);
+  });
+
+  const pathnameExt = path.extname(url.pathname).toLowerCase();
+  return {
+    data: buf.toString('base64'),
+    mediaType: inferImageMediaType(ALLOWED_IMAGE_EXTENSIONS.has(pathnameExt) ? pathnameExt : '.jpg')
+  };
+}
+
 async function imageToBase64(input: string): Promise<{ data: string; mediaType: string }> {
   const trimmed = input.trim();
   if (trimmed.startsWith('data:')) {
     const match = trimmed.match(/^data:(image\/[^;]+);base64,(.+)$/);
-    if (match) return { data: match[2], mediaType: match[1] };
+    if (match) {
+      const buffer = Buffer.from(match[2], 'base64');
+      if (buffer.length === 0) throw new Error('Image input is empty');
+      if (buffer.length > MAX_IMAGE_BYTES) {
+        throw new Error(`Image input exceeds ${MAX_IMAGE_BYTES} bytes`);
+      }
+      return { data: match[2], mediaType: match[1] };
+    }
   }
   if (trimmed.startsWith('http')) {
-    const buf = await new Promise<Buffer>((resolve, reject) => {
-      const mod = trimmed.startsWith('https') ? https : http;
-      const req = mod.get(trimmed, (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (c: Buffer) => chunks.push(c));
-        res.on('end', () => resolve(Buffer.concat(chunks)));
-        res.on('error', reject);
-      });
-      req.on('error', reject);
-    });
-    return { data: buf.toString('base64'), mediaType: 'image/jpeg' };
+    return fetchValidatedRemoteImage(trimmed);
   }
-  const filePath = trimmed.replace(/^~/, os.homedir());
-  const buf = await fs.readFile(path.resolve(filePath));
-  const ext = path.extname(filePath).toLowerCase();
-  const mediaType = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' }[ext] ?? 'image/jpeg';
-  return { data: buf.toString('base64'), mediaType };
+  return readValidatedImageFile(trimmed);
 }
 
 export async function analyzeImage(

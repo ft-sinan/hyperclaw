@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # macOS App Release & Auto-Update
 
 <div align="center">

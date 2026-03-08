@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # HyperClaw macOS Menubar (Tauri) — DEPRECATED
 
 <div align="center">

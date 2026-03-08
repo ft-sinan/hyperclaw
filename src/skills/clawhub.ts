@@ -9,6 +9,7 @@ import http from 'http';
 import fs from 'fs-extra';
 import path from 'path';
 import tar from 'tar';
+import { Readable } from 'stream';
 import { getHyperClawDir } from '../infra/paths';
 
 const CLAWHUB_API = process.env.CLAWHUB_API_URL || 'https://clawhub.com';
@@ -62,10 +63,12 @@ export async function installSkill(skillId: string, version?: string): Promise<s
     const extractDir = path.join(path.dirname(destDir), `.skill-extract-${skillId}-${Date.now()}`);
     await fs.ensureDir(extractDir);
     try {
-      const tarPath = path.join(extractDir, 'skill.tar.gz');
-      await fs.writeFile(tarPath, tarballBuffer);
-      await tar.x({ file: tarPath, cwd: extractDir });
-      await fs.remove(tarPath);
+      await new Promise<void>((resolve, reject) => {
+        Readable.from(tarballBuffer)
+          .pipe(tar.x({ cwd: extractDir }))
+          .on('finish', resolve)
+          .on('error', reject);
+      });
       // Tarball may have package/ or skillId/ root; find SKILL.md
       const entries = await fs.readdir(extractDir);
       let skillDir = extractDir;

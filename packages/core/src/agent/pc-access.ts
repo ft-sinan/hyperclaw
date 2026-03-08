@@ -75,22 +75,19 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
 
         let result = '';
         if (dockerSandbox) {
-          const scriptPath = path.join(os.tmpdir(), `hyperclaw-run-${Date.now()}.sh`);
           try {
             const absCwd = path.resolve(cwd.replace(/^~/, os.homedir()));
             // Reject paths with special chars that could break the docker -v argument
             if (/[`$\\!?*{}\[\]|;&<>]/.test(absCwd)) throw new Error('Working directory contains unsafe characters');
-            await fs.writeFile(scriptPath, `#!/bin/sh\n${cmd}\n`, { mode: 0o700 });
-            // Use execFile with argument array to avoid shell injection from absCwd/scriptPath
+            // Use execFile with argument array to avoid host shell injection.
             const { execFile } = await import('child_process');
             const { promisify } = await import('util');
             const execFileP = promisify(execFile);
             const { stdout, stderr } = await execFileP('docker', [
               'run', '--rm',
               '-v', `${absCwd}:/workspace`,
-              '-v', `${scriptPath}:/script.sh`,
               '-w', '/workspace',
-              'alpine', 'sh', '/script.sh'
+              'alpine', 'sh', '-lc', cmd
             ], {
               timeout: Math.min(timeout, 60000),
               maxBuffer: 10 * 1024 * 1024
@@ -102,8 +99,6 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
             } else {
               result = `Exit code ${e.code || 1}:\n${(e.stdout || '') + (e.stderr || e.message || '')}`.trim().slice(0, 8000);
             }
-          } finally {
-            await fs.remove(scriptPath).catch(() => {});
           }
         } else {
           try {
@@ -141,12 +136,6 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
         const maxLines = parseInt(input.lines as string || '500');
 
         try {
-          const stat = await fs.stat(filePath);
-          if (stat.isDirectory()) {
-            const entries = await fs.readdir(filePath);
-            return `Directory listing:\n${entries.join('\n')}`;
-          }
-
           const content = await fs.readFile(filePath, 'utf8');
           const lines = content.split('\n');
           const truncated = lines.slice(0, maxLines).join('\n');
@@ -155,6 +144,10 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
           await logAction('read_file', { path: filePath }, `${lines.length} lines`);
           return result;
         } catch (e: any) {
+          try {
+            const entries = await fs.readdir(filePath);
+            return `Directory listing:\n${entries.join('\n')}`;
+          } catch {}
           return `Error: ${e.message}`;
         }
       }
@@ -618,19 +611,18 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
         if (process.platform !== 'darwin') return 'Contacts available on macOS only';
         const limit = parseInt((input.limit as string) || '50', 10);
         const search = (input.search as string) || '';
-        const tmp = path.join(os.tmpdir(), `hc-contacts-${Date.now()}.scpt`);
         const script = `tell application "Contacts" to get name of every person`;
         try {
-          await fs.writeFile(tmp, script, 'utf8');
-          const { stdout } = await execAsync(`osascript "${tmp}"`, { timeout: 10000 });
-          await fs.remove(tmp).catch(() => {});
+          const { execFile } = await import('child_process');
+          const { promisify } = await import('util');
+          const execFileAsync = promisify(execFile);
+          const { stdout } = await execFileAsync('osascript', ['-e', script], { timeout: 10000 });
           let names = (stdout || '').trim().split(', ').filter(Boolean);
           if (search) names = names.filter((n: string) => n.toLowerCase().includes(search.toLowerCase()));
           const result = names.slice(0, limit).join('\n') || 'No contacts found';
           await logAction('contacts_list', { limit, search }, `${names.length} contacts`);
           return result;
         } catch (e: any) {
-          await fs.remove(tmp).catch(() => {});
           return `Error: ${e.message}. Grant Contacts access to Terminal if prompted.`;
         }
       }

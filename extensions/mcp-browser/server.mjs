@@ -125,15 +125,72 @@ function fetchUrl(url, maxRedirects = 3) {
   });
 }
 
+function stripBlockedTagContent(html, tagNames) {
+  let output = String(html || '');
+  for (const tag of tagNames) {
+    let lower = output.toLowerCase();
+    const open = `<${tag}`;
+    const close = `</${tag}>`;
+    let cursor = 0;
+    while (cursor < output.length) {
+      const start = lower.indexOf(open, cursor);
+      if (start === -1) break;
+      const end = lower.indexOf(close, start);
+      const removeTo = end === -1 ? output.length : end + close.length;
+      output = output.slice(0, start) + ' ' + output.slice(removeTo);
+      lower = output.toLowerCase();
+      cursor = start + 1;
+    }
+  }
+  return output;
+}
+
+function stripTags(html) {
+  let out = '';
+  let inTag = false;
+  for (const ch of String(html || '')) {
+    if (ch === '<') {
+      inTag = true;
+      out += ' ';
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      out += ' ';
+      continue;
+    }
+    if (!inTag) out += ch;
+  }
+  return out;
+}
+
+function decodeHtmlEntities(text) {
+  const named = {
+    amp: '&',
+    lt: '<',
+    gt: '>',
+    quot: '"',
+    apos: "'",
+    nbsp: ' '
+  };
+  return String(text || '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (_match, entity) => {
+    const raw = String(entity).toLowerCase();
+    if (raw.startsWith('#x')) {
+      const code = Number.parseInt(raw.slice(2), 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : _match;
+    }
+    if (raw.startsWith('#')) {
+      const code = Number.parseInt(raw.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : _match;
+    }
+    return named[raw] ?? _match;
+  });
+}
+
 function stripHtml(html) {
-  // Plain-text extraction for AI context only — NOT used for security sanitization.
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '') // lgtm[js/bad-html-tag-filter] lgtm[js/incomplete-multi-character-sanitization]
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ') // lgtm[js/double-escaping]
-    .replace(/\s+/g, ' ')
-    .trim();
+  const withoutBlocked = stripBlockedTagContent(html, ['script', 'style']);
+  const withoutTags = stripTags(withoutBlocked);
+  return decodeHtmlEntities(withoutTags).replace(/\s+/g, ' ').trim();
 }
 
 function extractLinks(html, baseUrl) {

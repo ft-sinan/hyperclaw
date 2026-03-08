@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # @hyperclaw/core
 
 <div align="center">

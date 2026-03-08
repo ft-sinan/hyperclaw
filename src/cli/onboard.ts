@@ -2404,7 +2404,7 @@ export class HyperClawWizard {
     ].join('\n');
 
     console.log('\n' + boxen(
-      chalk.hex('#06b6d4')('🦅 HyperClaw v5.2.5 ready!\n\n') + lines,
+      chalk.hex('#06b6d4')('🦅 HyperClaw v5.2.6 ready!\n\n') + lines,
       { padding: 1, borderStyle: 'round', borderColor: 'cyan', margin: 1, backgroundColor: '#0a0a0a' }
     ));
   }

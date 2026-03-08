@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # Android App Release Checklist
 
 <div align="center">

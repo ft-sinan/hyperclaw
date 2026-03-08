@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # Gateway API — HyperClaw
 
 <div align="center">

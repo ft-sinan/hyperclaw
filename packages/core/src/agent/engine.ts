@@ -55,14 +55,18 @@ export async function loadWorkspaceContext(hcDir?: string): Promise<string> {
   const core = ['SOUL.md', 'AGENTS.md', 'MEMORY.md'];
   for (const f of core) {
     const fp = path.join(dir, f);
-    if (fs.pathExistsSync(fp)) context += `## ${f}\n${fs.readFileSync(fp, 'utf8')}\n\n`;
+    try {
+      context += `## ${f}\n${fs.readFileSync(fp, 'utf8')}\n\n`;
+    } catch {}
   }
   try {
     const entries = fs.readdirSync(dir) as string[];
     for (const f of entries) {
       if (f.endsWith('.md') && !core.includes(f)) {
         const fp = path.join(dir, f);
-        if (fs.statSync(fp).isFile()) context += `## ${f}\n${fs.readFileSync(fp, 'utf8')}\n\n`;
+        try {
+          context += `## ${f}\n${fs.readFileSync(fp, 'utf8')}\n\n`;
+        } catch {}
       }
     }
   } catch {}

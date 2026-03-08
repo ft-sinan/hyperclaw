@@ -83,13 +83,13 @@ export function supportsMedia(channelId: string, type: MediaItem['type']): boole
   return supported[channelId]?.includes(type) ?? false;
 }
 
-/** Enrich message text from voice note (transcribe if audioPath provided). */
-export async function enrichVoiceNote(msg: { chatId: string | number; text: string; audioPath?: string }): Promise<string> {
-  if (!msg.audioPath) return msg.text;
+/** Enrich message text from voice note (transcribe if audioPath/audioBuffer provided). */
+export async function enrichVoiceNote(msg: { chatId: string | number; text: string; audioPath?: string; audioBuffer?: Buffer }): Promise<string> {
+  if (!msg.audioPath && !msg.audioBuffer) return msg.text;
   if (msg.text && msg.text !== '[voice note]') return msg.text;
   try {
     const { transcribeVoiceNote } = await import('../services/voice-transcription');
-    const text = await transcribeVoiceNote(msg.audioPath);
+    const text = await transcribeVoiceNote(msg.audioBuffer ?? msg.audioPath!);
     return text || msg.text;
   } catch (e: any) {
     return `[Voice note — transcription failed: ${e.message}]`;

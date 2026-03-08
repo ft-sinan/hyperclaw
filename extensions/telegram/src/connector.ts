@@ -6,8 +6,8 @@
 
 import https from 'https';
 import fs from 'fs-extra';
-import path from 'path';
 import os from 'os';
+import path from 'path';
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
 
@@ -187,15 +187,11 @@ export class TelegramConnector extends EventEmitter {
       // activation === 'always': respond to all group messages, no filter
     }
 
-    let audioPath: string | undefined;
+    let audioBuffer: Buffer | undefined;
     if (msg?.voice?.file_id) {
       try {
         const file = await tgRequest(this.token, 'getFile', { file_id: msg.voice.file_id });
-        const buf = await tgDownloadFile(this.token, file.file_path);
-        const ext = (file.file_path || '').split('.').pop() || 'oga';
-        const tmp = path.join(os.tmpdir(), `hyperclaw-tg-voice-${msg.message_id}.${ext}`);
-        await fs.writeFile(tmp, buf);
-        audioPath = tmp;
+        audioBuffer = await tgDownloadFile(this.token, file.file_path);
       } catch (e: any) {
         console.log(chalk.yellow(`  ⚠  Telegram voice download failed: ${e.message}`));
       }
@@ -208,7 +204,7 @@ export class TelegramConnector extends EventEmitter {
       fromUsername: msg.from?.username,
       chatId: msg.chat.id,
       text: finalText,
-      audioPath,
+      audioBuffer,
       timestamp: new Date(msg.date * 1000).toISOString(),
       isDM
     });

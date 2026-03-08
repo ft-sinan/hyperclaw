@@ -7,6 +7,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs-extra';
+import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
 import { getHyperClawDir, getConfigPath } from '../infra/paths';

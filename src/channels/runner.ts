@@ -29,6 +29,7 @@ const webhookConnectors: Record<string, {
 
 export interface ChannelRunnerResult {
   stop: () => Promise<void>;
+  hasWebhookChannel?: (channelId: string) => boolean;
   handleWebhook?: (channelId: string, body: string, opts?: WebhookOpts) => Promise<string | void>;
   verifyWebhook?: (channelId: string, mode: string, token: string, challenge: string) => string | null;
 }
@@ -80,6 +81,7 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
       chatId: string | number;
       text: string;
       audioPath?: string;
+      audioBuffer?: Buffer;
       isDM?: boolean;
       isGroup?: boolean;
       from?: string;
@@ -866,6 +868,7 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
       emailConnectorRef = null;
       Object.keys(webhookConnectors).forEach(k => delete webhookConnectors[k]);
     },
+    hasWebhookChannel: (channelId: string) => Object.prototype.hasOwnProperty.call(webhookConnectors, channelId),
     handleWebhook: async (channelId: string, body: string, opts?: { signature?: string; timestamp?: string }) => {
       const h = webhookConnectors[channelId];
       if (h) {

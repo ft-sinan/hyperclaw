@@ -9,6 +9,49 @@ import path from 'path';
 import https from 'https';
 import { getConfigPath } from '../infra/paths';
 
+const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+const ALLOWED_AUDIO_EXTENSIONS = new Set([
+  '.ogg',
+  '.oga',
+  '.mp3',
+  '.wav',
+  '.m4a',
+  '.mp4',
+  '.mpeg',
+  '.webm'
+]);
+
+function sanitizeForError(value: unknown): string {
+  return String(value ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .slice(0, 160);
+}
+
+async function loadAudioInput(audioPathOrBuffer: string | Buffer): Promise<Buffer> {
+  if (Buffer.isBuffer(audioPathOrBuffer)) {
+    if (audioPathOrBuffer.length === 0) throw new Error('Audio input is empty');
+    if (audioPathOrBuffer.length > MAX_AUDIO_BYTES) {
+      throw new Error(`Audio input exceeds ${MAX_AUDIO_BYTES} bytes`);
+    }
+    return audioPathOrBuffer;
+  }
+
+  const resolvedPath = path.resolve(audioPathOrBuffer);
+  const ext = path.extname(resolvedPath).toLowerCase();
+  if (!ALLOWED_AUDIO_EXTENSIONS.has(ext)) {
+    throw new Error(`Unsupported audio file type: ${ext || 'unknown'}`);
+  }
+
+  const stats = await fs.stat(resolvedPath);
+  if (!stats.isFile()) throw new Error('Audio input must be a file');
+  if (stats.size === 0) throw new Error('Audio input is empty');
+  if (stats.size > MAX_AUDIO_BYTES) {
+    throw new Error(`Audio input exceeds ${MAX_AUDIO_BYTES} bytes`);
+  }
+
+  return fs.readFile(resolvedPath);
+}
+
 async function getConfig(): Promise<{ providerId?: string; apiKey?: string }> {
   try {
     const cfg = await fs.readJson(getConfigPath());
@@ -119,10 +162,10 @@ export async function transcribeVoiceNote(
   apiKey?: string
 ): Promise<string> {
   let buffer: Buffer;
-  if (typeof audioPathOrBuffer === 'string') {
-    buffer = await fs.readFile(audioPathOrBuffer);
-  } else {
-    buffer = audioPathOrBuffer;
+  try {
+    buffer = await loadAudioInput(audioPathOrBuffer);
+  } catch (e: any) {
+    return `[Transcription failed: ${sanitizeForError(e?.message)}]`;
   }
 
   const cfg = await getConfig();
@@ -148,7 +191,7 @@ export async function transcribeVoiceNote(
     try {
       return await transcribeWithWhisper(buffer, openaiKey);
     } catch (e: any) {
-      return `[Transcription failed: ${e.message}]`;
+      return `[Transcription failed: ${sanitizeForError(e?.message)}]`;
     }
   }
 
@@ -157,7 +200,7 @@ export async function transcribeVoiceNote(
     try {
       return await transcribeWithGemini(buffer, googleKey);
     } catch (e: any) {
-      return `[Transcription failed: ${e.message}]`;
+      return `[Transcription failed: ${sanitizeForError(e?.message)}]`;
     }
   }
 

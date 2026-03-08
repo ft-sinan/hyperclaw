@@ -13,8 +13,8 @@ if (!zipFile) {
 }
 
 const zipPath = path.join(distDir, zipFile);
-const stat = fs.statSync(zipPath);
-const sha256 = crypto.createHash('sha256').update(fs.readFileSync(zipPath)).digest('hex');
+const zipBuffer = fs.readFileSync(zipPath);
+const sha256 = crypto.createHash('sha256').update(zipBuffer).digest('hex');
 const pubDate = new Date().toUTCString();
 const releaseUrl = `https://github.com/${repo}/releases/download/v${normalizedVersion}/${zipFile}`;
 
@@ -34,7 +34,7 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
         url="${releaseUrl}"
         sparkle:version="${normalizedVersion}"
         sparkle:shortVersionString="${normalizedVersion}"
-        length="${stat.size}"
+        length="${zipBuffer.length}"
         type="application/octet-stream"
         sparkle:edSignature=""
         sparkle:sha256="${sha256}" />
@@ -43,5 +43,8 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
 </rss>
 `;
 
-fs.writeFileSync(path.join(distDir, 'appcast.xml'), xml, 'utf8');
+const appcastPath = path.join(distDir, 'appcast.xml');
+const tmpPath = `${appcastPath}.tmp`;
+fs.writeFileSync(tmpPath, xml, 'utf8');
+fs.renameSync(tmpPath, appcastPath);
 console.log(`Generated appcast.xml for ${zipFile}`);

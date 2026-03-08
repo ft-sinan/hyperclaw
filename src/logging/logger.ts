@@ -89,7 +89,7 @@ function write(module: string, level: LogLevel, message: string, data?: Record<s
   if (_fileEnabled) {
     if (!rotateChecked) {
       rotateChecked = true;
-      fs.ensureDir(LOG_DIR).then(() => rotateIfNeeded()).catch(() => {});
+      fs.ensureDir(getLogDir()).then(() => rotateIfNeeded()).catch(() => {});
     }
     fs.appendFile(getLogFile(), formatFile(entry)).catch(() => {});
   }
@@ -114,7 +114,7 @@ export async function tailLog(lines = 50): Promise<void> {
     return;
   }
 
-  const content = await fs.readFile(LOG_FILE, 'utf8');
+  const content = await fs.readFile(getLogFile(), 'utf8');
   const all = content.trim().split('\n').filter(Boolean);
   const tail = all.slice(-lines);
 

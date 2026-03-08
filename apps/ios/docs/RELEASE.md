@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # iOS App Release Checklist
 
 <div align="center">

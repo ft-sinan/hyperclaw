@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { WebSocket } from 'ws';
 import ora from 'ora';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -10,6 +10,7 @@ import { startGateway, getActiveServer } from '../gateway/server';
 import { getHyperClawDir, getConfigPath } from './paths';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // H-1: Use path helpers so --profile and HYPERCLAW_STATE_DIR are respected
 const getHCDir = () => getHyperClawDir();
@@ -394,11 +395,11 @@ WantedBy=default.target
     await fs.writeFile(taskXmlPath, buf);
 
     try {
-      await execAsync(`schtasks /delete /tn "${taskName}" /f`).catch(() => {});
-      await execAsync(`schtasks /create /tn "${taskName}" /xml "${taskXmlPath}" /f`);
+      await execFileAsync('schtasks', ['/delete', '/tn', taskName, '/f']).catch(() => {});
+      await execFileAsync('schtasks', ['/create', '/tn', taskName, '/xml', taskXmlPath, '/f']);
       await fs.remove(taskXmlPath).catch(() => {});
       // Start immediately — no need to wait for next logon
-      await execAsync(`schtasks /run /tn "${taskName}"`).catch(() => {});
+      await execFileAsync('schtasks', ['/run', '/tn', taskName]).catch(() => {});
 
       console.log(chalk.green('  ✅ Task Scheduler entry created — starts on every logon'));
       console.log(chalk.gray(`  User:    ${userId}`));

@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import type { GatewayDeps, SessionStoreLike } from './deps';
 
 let activeServer: GatewayServer | null = null;
+const PUBLIC_API_PATHS = new Set(['/api/v1/check', '/api/status']);
 
 // ─── Gateway Lock ─────────────────────────────────────────────────────────────
 
@@ -118,7 +119,7 @@ export class GatewayServer {
   private config: GatewayConfig;
   private startedAt = '';
   private stopCron: (() => void) | null = null;
-  private channelRunner: { stop: () => Promise<void>; handleWebhook?: (channelId: string, body: string, opts?: { signature?: string; timestamp?: string }) => Promise<string | void>; verifyWebhook?: (channelId: string, mode: string, token: string, challenge: string) => string | null } | null = null;
+  private channelRunner: { stop: () => Promise<void>; handleWebhook?: (channelId: string, body: string, opts?: { signature?: string; timestamp?: string }) => Promise<string | void>; verifyWebhook?: (channelId: string, mode: string, token: string, challenge: string) => string | null; hasWebhookChannel?: (channelId: string) => boolean } | null = null;
   private configWatcher: { close: () => void } | null = null;
   private configReloadDebounce: ReturnType<typeof setTimeout> | null = null;
 
@@ -339,21 +340,35 @@ export class GatewayServer {
     return { ok: true };
   }
 
+  private isProtectedApiPath(pathname: string): boolean {
+    return pathname.startsWith('/api/') && !PUBLIC_API_PATHS.has(pathname);
+  }
+
+  private resolveWebhookChannelId(pathname: string): string | null {
+    if (!pathname.startsWith('/webhook/')) return null;
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length !== 2) return null;
+    const channelId = parts[1] ?? '';
+    return /^[a-z0-9-]+$/i.test(channelId) ? channelId : null;
+  }
+
   private async handleHttp(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-    const url = (req.url || '/').split('?')[0];
+    const requestUrl = new URL(req.url || '/', 'http://localhost');
+    const pathname = requestUrl.pathname;
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/json');
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-    if (url === '/api/v1/check') {
+    if (this.isProtectedApiPath(pathname) && !(await this.requireAuth(req, res))) return;
+
+    if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.2.5' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.2.6' }));
       return;
     }
 
     // Config RPC — rate-limited to 3 req/60 s per deviceId+clientIp
-    if ((url === '/api/v1/config/apply' || url === '/api/v1/config/patch') && req.method === 'POST') {
-      if (!(await this.requireAuth(req, res))) return;
+    if ((pathname === '/api/v1/config/apply' || pathname === '/api/v1/config/patch') && req.method === 'POST') {
       const clientIp = this.resolveClientIp(req);
       const deviceId = (req.headers['x-hyperclaw-device'] as string) || 'anon';
       const rlKey = `${deviceId}:${clientIp}`;
@@ -371,7 +386,7 @@ export class GatewayServer {
           const configPath = this.config.deps.getConfigPath();
           const current = await fs.readJson(configPath).catch(() => ({}));
           let next: object;
-          if (url.endsWith('/apply')) {
+          if (pathname.endsWith('/apply')) {
             // Full replace
             next = payload;
           } else {
@@ -380,7 +395,7 @@ export class GatewayServer {
           }
           await fs.writeJson(configPath, next, { spaces: 2 });
           res.writeHead(200);
-          res.end(JSON.stringify({ ok: true, action: url.endsWith('/apply') ? 'apply' : 'patch' }));
+          res.end(JSON.stringify({ ok: true, action: pathname.endsWith('/apply') ? 'apply' : 'patch' }));
         } catch (e: any) {
           res.writeHead(400);
           res.end(JSON.stringify({ error: e.message }));
@@ -389,8 +404,7 @@ export class GatewayServer {
       return;
     }
 
-    if (url === '/api/v1/pi' && req.method === 'POST') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/v1/pi' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
       req.on('end', async () => {
@@ -410,7 +424,7 @@ export class GatewayServer {
       });
       return;
     }
-    if (url === '/api/status') {
+    if (pathname === '/api/status') {
       const cfg = this.loadConfig();
       res.writeHead(200);
       res.end(JSON.stringify({
@@ -424,10 +438,9 @@ export class GatewayServer {
       }));
       return;
     }
-    if (url === '/api/traces' && req.method === 'GET') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/traces' && req.method === 'GET') {
       (async () => {
-        const params = new URL(req.url || '', 'http://localhost').searchParams;
+        const params = requestUrl.searchParams;
         const limit = Math.min(100, parseInt(params.get('limit') || '50', 10) || 50);
         try {
           const traces = this.config.deps.listTraces
@@ -442,10 +455,9 @@ export class GatewayServer {
       })();
       return;
     }
-    if (url === '/api/costs' && req.method === 'GET') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/costs' && req.method === 'GET') {
       (async () => {
-        const params = new URL(req.url || '', 'http://localhost').searchParams;
+        const params = requestUrl.searchParams;
         const sessionId = params.get('sessionId');
         const hcDir = this.config.deps.getHyperClawDir();
         try {
@@ -466,14 +478,7 @@ export class GatewayServer {
       return;
     }
 
-    if (url === '/api/remote/restart' && req.method === 'POST') {
-      const auth = req.headers.authorization;
-      const token = this.config.deps.resolveGatewayToken(this.config.authToken);
-      if (token && auth !== `Bearer ${token}`) {
-        res.writeHead(401);
-        res.end(JSON.stringify({ error: 'Unauthorized' }));
-        return;
-      }
+    if (pathname === '/api/remote/restart' && req.method === 'POST') {
       (async () => {
         const hcDir = this.config.deps.getHyperClawDir();
         const pidFile = path.join(hcDir, 'gateway.pid');
@@ -509,8 +514,7 @@ export class GatewayServer {
       return;
     }
 
-    if (url === '/api/v1/tts' && req.method === 'POST') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/v1/tts' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
       req.on('end', async () => {
@@ -544,8 +548,7 @@ export class GatewayServer {
       });
       return;
     }
-    if (url === '/api/nodes' && req.method === 'GET') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/nodes' && req.method === 'GET') {
       try {
         const NR = this.config.deps.NodeRegistry;
         const nodes = NR ? NR.getNodes().map(n => ({
@@ -564,8 +567,7 @@ export class GatewayServer {
       }
       return;
     }
-    if (url === '/api/chat' && req.method === 'POST') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/chat' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
       req.on('end', async () => {
@@ -586,8 +588,7 @@ export class GatewayServer {
       return;
     }
     // Generic inbound webhook: POST { message } → agent. For external services (cron, Zapier, etc).
-    if (url === '/api/webhook/inbound' && req.method === 'POST') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/webhook/inbound' && req.method === 'POST') {
       let body = '';
       req.on('data', c => body += c);
       req.on('end', async () => {
@@ -610,8 +611,7 @@ export class GatewayServer {
       return;
     }
 
-    if (url === '/api/canvas/state' && req.method === 'GET') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/canvas/state' && req.method === 'GET') {
       const getState = this.config.deps.getCanvasState;
       if (getState) {
         getState().then(canvas => {
@@ -638,8 +638,7 @@ export class GatewayServer {
       }
       return;
     }
-    if (url === '/api/canvas/a2ui' && req.method === 'GET') {
-      if (!(await this.requireAuth(req, res))) return;
+    if (pathname === '/api/canvas/a2ui' && req.method === 'GET') {
       const getA2UI = this.config.deps.getCanvasA2UI;
       if (getA2UI) {
         getA2UI().then(jsonl => {
@@ -673,7 +672,7 @@ export class GatewayServer {
       }
       return;
     }
-    if (url === '/chat' || url === '/chat/') {
+    if (pathname === '/chat' || pathname === '/chat/') {
       res.setHeader('Content-Type', 'text/html');
       // Look for static/ relative to the package root (one level up from dist/)
       const staticDir = path.resolve(__dirname, '..', 'static');
@@ -682,7 +681,7 @@ export class GatewayServer {
       else res.end('<!DOCTYPE html><html><body><p>Chat UI not found. Run from package root or reinstall hyperclaw.</p></body></html>');
       return;
     }
-    if (url === '/dashboard' || url === '/dashboard/') {
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
       res.setHeader('Content-Type', 'text/html');
       const staticDir = path.resolve(__dirname, '..', 'static');
       const fp = path.join(staticDir, 'dashboard.html');
@@ -690,15 +689,20 @@ export class GatewayServer {
       else res.end('<!DOCTYPE html><html><body><p>Dashboard: <a href="/api/status">status</a></p></body></html>');
       return;
     }
-    if (url === '/' || url === '') {
+    if (pathname === '/' || pathname === '') {
       res.writeHead(302, { Location: '/dashboard' });
       res.end();
       return;
     }
-    if (url.startsWith('/webhook/')) {
-      const channelId = url.split('/')[2];
+    if (pathname.startsWith('/webhook/')) {
+      const channelId = this.resolveWebhookChannelId(pathname);
+      if (!channelId || !this.channelRunner?.hasWebhookChannel?.(channelId)) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: 'Webhook channel not found' }));
+        return;
+      }
       if (req.method === 'GET') {
-        const params = new URL(url, 'http://x').searchParams;
+        const params = requestUrl.searchParams;
         // Twitter/X Account Activity API uses crc_token
         if (channelId === 'twitter') {
           const crcToken = params.get('crc_token');
@@ -709,6 +713,9 @@ export class GatewayServer {
               res.end(verified);
               return;
             }
+            res.writeHead(403);
+            res.end(JSON.stringify({ error: 'Webhook verification failed' }));
+            return;
           }
         }
         const mode = params.get('hub.mode') || '';
@@ -719,8 +726,8 @@ export class GatewayServer {
           res.writeHead(200, { 'Content-Type': 'text/plain' });
           res.end(verified);
         } else {
-          res.writeHead(200);
-          res.end(JSON.stringify({ ok: true }));
+          res.writeHead(403);
+          res.end(JSON.stringify({ error: 'Webhook verification failed' }));
         }
         return;
       }
@@ -737,7 +744,15 @@ export class GatewayServer {
           else if (channelId === 'instagram' || channelId === 'messenger') opts = { signature: (req.headers['x-hub-signature-256'] as string) || '' };
           else if (channelId === 'viber') opts = { signature: (req.headers['x-viber-signature'] as string) || '' };
           let challenge: string | void = undefined;
-          if (this.channelRunner?.handleWebhook) challenge = await this.channelRunner.handleWebhook(channelId, body, opts).catch(() => undefined);
+          try {
+            if (this.channelRunner?.handleWebhook) {
+              challenge = await this.channelRunner.handleWebhook(channelId, body, opts);
+            }
+          } catch {
+            res.writeHead(403);
+            res.end(JSON.stringify({ error: 'Webhook rejected' }));
+            return;
+          }
           this.broadcast({ type: 'webhook:received', channelId, payload: body });
           if (typeof challenge === 'string') {
             const contentType = challenge.trim().startsWith('{') ? 'application/json' : 'text/plain';
@@ -771,7 +786,7 @@ export class GatewayServer {
     if (authToken && !session.authenticated) {
       this.send(session, { type: 'connect.challenge', sessionId: id });
     } else {
-      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.2.5', heartbeatInterval: 30000 });
+      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.2.6', heartbeatInterval: 30000 });
       if (this.config.hooks && this.config.deps.createHookLoader) {
         this.config.deps.createHookLoader().execute('session:start', { sessionId: id }).catch(() => {});
       }

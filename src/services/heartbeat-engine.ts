@@ -6,7 +6,9 @@
 import fs from 'fs-extra';
 import path from 'path';
 import http from 'http';
-import { getConfigPath } from '../infra/paths';
+import { getConfigPath, getHyperClawDir } from '../infra/paths';
+
+const HC_DIR = getHyperClawDir();
 
 export interface HeartbeatConfig {
   morningBriefing?: { enabled?: boolean; cron?: string };
@@ -32,6 +34,14 @@ async function getGatewayConfig(): Promise<{ port: number; authToken?: string }>
   } catch {
     return { port: 18789 };
   }
+}
+
+function sanitizeBriefing(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/[^\x09\x0a\x0d\x20-\x7e]+/g, '')
+    .trim()
+    .slice(0, 12000);
 }
 
 /** Generate morning briefing via agent (POST /api/chat). */
@@ -84,9 +94,10 @@ Be concise. Format as markdown bullets. No preamble.`;
 export async function persistBriefing(text: string): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const ts = new Date().toISOString();
+  const sanitized = sanitizeBriefing(text);
 
   const heartbeatPath = path.join(HC_DIR, 'HEARTBEAT.md');
-  const content = `## Morning Briefing — ${today}\n\n${text}\n\n---\n*Generated ${ts}*\n`;
+  const content = `## Morning Briefing — ${today}\n\n${sanitized}\n\n---\n*Generated ${ts}*\n`;
   await fs.ensureDir(HC_DIR);
   if (await fs.pathExists(heartbeatPath)) {
     const existing = await fs.readFile(heartbeatPath, 'utf8');
@@ -98,5 +109,5 @@ export async function persistBriefing(text: string): Promise<void> {
   const logDir = path.join(HC_DIR, 'logs');
   const logPath = path.join(logDir, `heartbeat-${today}.md`);
   await fs.ensureDir(logDir);
-  await fs.appendFile(logPath, `\n## ${ts}\n\n${text}\n`, 'utf8');
+  await fs.appendFile(logPath, `\n## ${ts}\n\n${sanitized}\n`, 'utf8');
 }

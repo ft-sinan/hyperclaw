@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # Gateway Protocol — HyperClaw
 
 <div align="center">

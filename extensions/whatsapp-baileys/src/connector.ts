@@ -10,8 +10,8 @@
  */
 
 import fs from 'fs-extra';
-import path from 'path';
 import os from 'os';
+import path from 'path';
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
 
@@ -87,15 +87,12 @@ export class WhatsAppBaileysConnector extends EventEmitter {
         let text = msg.conversation || msg.extendedTextMessage?.text || '';
         const from = (m.key.remoteJid || '').replace(/@.*/, '');
 
-        // Voice note: download to temp, emit with audioPath for transcription hook
+        // Voice note: keep media in memory; avoid insecure temporary files.
         if (msg.audioMessage || msg.pttMessage) {
-          let audioPath: string | undefined;
+          let audioBuffer: Buffer | undefined;
           try {
             const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-            const buf = await downloadMediaMessage(m, 'buffer', {}, { reuploadRequest: this.sock?.updateMessageSent });
-            const tmp = path.join(os.tmpdir(), `hyperclaw-voice-${m.key.id}.ogg`);
-            await fs.writeFile(tmp, buf);
-            audioPath = tmp;
+            audioBuffer = await downloadMediaMessage(m, 'buffer', {}, { reuploadRequest: this.sock?.updateMessageSent });
           } catch {}
           this.emit('message', {
             id: m.key.id,
@@ -103,7 +100,7 @@ export class WhatsAppBaileysConnector extends EventEmitter {
             from,
             chatId: m.key.remoteJid,
             text: '[voice note]',
-            audioPath,
+            audioBuffer,
             timestamp: new Date(parseInt(m.messageTimestamp || '0') * 1000).toISOString(),
             isDM: true
           });

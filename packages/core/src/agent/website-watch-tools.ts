@@ -33,9 +33,48 @@ async function fetchUrl(url: string): Promise<string> {
   });
 }
 
+function stripBlockedTagContent(html: string, tagNames: string[]): string {
+  let output = String(html || '');
+  for (const tag of tagNames) {
+    let lower = output.toLowerCase();
+    const open = `<${tag}`;
+    const close = `</${tag}>`;
+    let cursor = 0;
+    while (cursor < output.length) {
+      const start = lower.indexOf(open, cursor);
+      if (start === -1) break;
+      const end = lower.indexOf(close, start);
+      const removeTo = end === -1 ? output.length : end + close.length;
+      output = output.slice(0, start) + ' ' + output.slice(removeTo);
+      lower = output.toLowerCase();
+      cursor = start + 1;
+    }
+  }
+  return output;
+}
+
+function stripTags(html: string): string {
+  let out = '';
+  let inTag = false;
+  for (const ch of String(html || '')) {
+    if (ch === '<') {
+      inTag = true;
+      out += ' ';
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      out += ' ';
+      continue;
+    }
+    if (!inTag) out += ch;
+  }
+  return out;
+}
+
 function hashContent(html: string): string {
   // Plain-text change-detection hashing only — NOT used for security sanitization.
-  const cleaned = html.replace(/\s+/g, ' ').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').slice(0, 50000); // lgtm[js/bad-html-tag-filter] lgtm[js/incomplete-multi-character-sanitization]
+  const cleaned = stripTags(stripBlockedTagContent(html, ['script', 'style'])).replace(/\s+/g, ' ').slice(0, 50000);
   return crypto.createHash('sha256').update(cleaned).digest('hex').slice(0, 16);
 }
 

@@ -1,4 +1,4 @@
-<a name="top">
+<a name="top"></a>
 # Discovery — HyperClaw
 
 <div align="center">
