@@ -38,7 +38,7 @@
     function appendMsg(role, content) {
       const div = document.createElement('div');
       div.className = 'msg ' + role;
-      div.innerHTML = content.replace(/\n/g, '<br>').replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+      div.innerHTML = esc(content).replace(/\n/g, '<br>').replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
       messagesEl.appendChild(div);
       messagesEl.scrollTop = messagesEl.scrollHeight;
       return div;

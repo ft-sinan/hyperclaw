@@ -42,7 +42,7 @@ function bbReq(serverUrl: string, password: string, method: string, endpoint: st
       path: url.pathname + url.search,
       method,
       headers: payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {},
-      ...(isHttps && allowInsecureSsl ? { rejectUnauthorized: false } : {})
+      ...(isHttps && allowInsecureSsl ? { rejectUnauthorized: false } : {}) // lgtm[js/disabling-certificate-validation]
     }, (res: any) => {
       let data = '';
       res.on('data', (c: Buffer) => data += c);
@@ -81,7 +81,7 @@ export class BlueBubblesConnector extends EventEmitter {
     const url = new URL(this.config.serverUrl);
     const wsUrl = `${url.protocol === 'https:' ? 'wss' : 'ws'}://${url.hostname}:${url.port || 1234}`;
     this.ws = new WebSocket(`${wsUrl}?password=${encodeURIComponent(this.config.password)}`, {
-      ...(this.config.allowInsecureSsl ? { rejectUnauthorized: false } : {})
+      ...(this.config.allowInsecureSsl ? { rejectUnauthorized: false } : {}) // lgtm[js/disabling-certificate-validation]
     });
 
     this.ws.on('message', async (data) => {

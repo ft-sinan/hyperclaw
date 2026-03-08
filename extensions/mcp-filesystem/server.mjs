@@ -120,10 +120,11 @@ function walkDir(dir, recursive, depth = 0) {
 
 function searchFiles(pattern, dir) {
   const results = [];
-  const regex = new RegExp(
-    '^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '$',
-    'i'
-  );
+  // Escape all regex special chars, then restore glob wildcards (* → .*, ? → .)
+  const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\\\*/g, '.*')
+    .replace(/\\\?/g, '.');
+  const regex = new RegExp('^' + escaped + '$', 'i');
   function walk(d) {
     if (results.length >= 100) return;
     try {

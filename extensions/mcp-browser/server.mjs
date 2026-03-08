@@ -126,13 +126,12 @@ function fetchUrl(url, maxRedirects = 3) {
 }
 
 function stripHtml(html) {
-  // Not used for security sanitization — purpose is plain-text extraction for AI context.
-  // lgtm[js/incomplete-html-tag-sanitization] lgtm[js/bad-tag-filter] lgtm[js/double-escaping]
+  // Plain-text extraction for AI context only — NOT used for security sanitization.
   return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '') // lgtm[js/bad-html-tag-filter] lgtm[js/incomplete-multi-character-sanitization]
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ') // lgtm[js/double-escaping]
     .replace(/\s+/g, ' ')
     .trim();
 }

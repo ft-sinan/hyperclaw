@@ -14,8 +14,9 @@
 import { definePlugin, PluginContext } from '../../../src/sdk/index';
 import chalk from 'chalk';
 import ora from 'ora';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
+const execFileAsync = promisify(execFile);
 import path from 'path';
 import os from 'os';
 import fs from 'fs-extra';
@@ -158,17 +159,16 @@ export class VoiceCallSession {
     if (engine === 'none') return;
 
     try {
-      const rate = Math.round(150 * this.config.speakingRate);
-      const escaped = text.replace(/"/g, '\\"').replace(/`/g, '\\`');
-
+      const rate = String(Math.round(150 * this.config.speakingRate));
+      // Use execFile with argument arrays to avoid shell injection from text content
       if (engine === 'say') {
-        await execAsync(`say -r ${rate} "${escaped}"`);
+        await execFileAsync('say', ['-r', rate, text]);
       } else if (engine === 'espeak') {
-        await execAsync(`espeak -s ${rate} -v ${this.config.language} "${escaped}"`);
+        await execFileAsync('espeak', ['-s', rate, '-v', this.config.language, text]);
       } else if (engine === 'gtts') {
         const tmpFile = path.join(os.tmpdir(), 'hyperclaw-tts.mp3');
-        await execAsync(`gtts-cli "${escaped}" -l ${this.config.language} -o ${tmpFile}`);
-        await execAsync(`mpv --really-quiet ${tmpFile}`);
+        await execFileAsync('gtts-cli', [text, '-l', this.config.language, '-o', tmpFile]);
+        await execFileAsync('mpv', ['--really-quiet', tmpFile]);
       }
     } catch {
       // TTS failure is non-fatal

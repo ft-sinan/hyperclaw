@@ -34,9 +34,8 @@ async function fetchUrl(url: string): Promise<string> {
 }
 
 function hashContent(html: string): string {
-  // Not used for security sanitization — only for change-detection hashing
-  // lgtm[js/incomplete-html-tag-sanitization] lgtm[js/bad-tag-filter]
-  const cleaned = html.replace(/\s+/g, ' ').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').slice(0, 50000);
+  // Plain-text change-detection hashing only — NOT used for security sanitization.
+  const cleaned = html.replace(/\s+/g, ' ').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').slice(0, 50000); // lgtm[js/bad-html-tag-filter] lgtm[js/incomplete-multi-character-sanitization]
   return crypto.createHash('sha256').update(cleaned).digest('hex').slice(0, 16);
 }
 

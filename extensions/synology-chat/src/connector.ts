@@ -166,7 +166,7 @@ function postToSynology(incomingUrl: string, text: string, userId?: string, allo
     };
 
     if (isHttps && allowInsecureSsl) {
-      (options as https.RequestOptions).rejectUnauthorized = false;
+      (options as https.RequestOptions).rejectUnauthorized = false; // lgtm[js/disabling-certificate-validation]
     }
 
     const req = (isHttps ? https : http).request(options, (res) => {

@@ -81,8 +81,17 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
             // Reject paths with special chars that could break the docker -v argument
             if (/[`$\\!?*{}\[\]|;&<>]/.test(absCwd)) throw new Error('Working directory contains unsafe characters');
             await fs.writeFile(scriptPath, `#!/bin/sh\n${cmd}\n`, { mode: 0o700 });
-            const dockerCmd = `docker run --rm -v "${absCwd}:/workspace" -v "${scriptPath}:/script.sh" -w /workspace alpine sh /script.sh`;
-            const { stdout, stderr } = await execAsync(dockerCmd, {
+            // Use execFile with argument array to avoid shell injection from absCwd/scriptPath
+            const { execFile } = await import('child_process');
+            const { promisify } = await import('util');
+            const execFileP = promisify(execFile);
+            const { stdout, stderr } = await execFileP('docker', [
+              'run', '--rm',
+              '-v', `${absCwd}:/workspace`,
+              '-v', `${scriptPath}:/script.sh`,
+              '-w', '/workspace',
+              'alpine', 'sh', '/script.sh'
+            ], {
               timeout: Math.min(timeout, 60000),
               maxBuffer: 10 * 1024 * 1024
             });
@@ -608,7 +617,7 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
       handler: async (input) => {
         if (process.platform !== 'darwin') return 'Contacts available on macOS only';
         const limit = parseInt((input.limit as string) || '50', 10);
-        const search = ((input.search as string) || '').replace(/"/g, '\\"');
+        const search = (input.search as string) || '';
         const tmp = path.join(os.tmpdir(), `hc-contacts-${Date.now()}.scpt`);
         const script = `tell application "Contacts" to get name of every person`;
         try {
@@ -743,15 +752,19 @@ export function getPCAccessTools(opts?: PCAccessToolsOptions): Tool[] {
         const message = input.message as string;
 
         try {
-          let cmd: string;
+          const { execFile } = await import('child_process');
+          const { promisify } = await import('util');
+          const execFileAsync = promisify(execFile);
           if (process.platform === 'darwin') {
-            cmd = `osascript -e 'display notification "${message.replace(/"/g, '\\"')}" with title "${title.replace(/"/g, '\\"')}"'`;
+            const safeTitle = title.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
+            const safeMsg = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
+            await execFileAsync('osascript', ['-e', `display notification "${safeMsg}" with title "${safeTitle}"`], { timeout: 5000 });
           } else if (process.platform === 'linux') {
-            cmd = `notify-send "${title.replace(/"/g, '\\"')}" "${message.replace(/"/g, '\\"')}"`;
+            // execFile with args to avoid shell injection
+            await execFileAsync('notify-send', [title, message], { timeout: 5000 });
           } else {
             return 'Notifications not supported';
           }
-          await execAsync(cmd, { timeout: 5000 });
           return `Notification sent: ${title} — ${message}`;
         } catch (e: any) {
           return `Error: ${e.message}`;
