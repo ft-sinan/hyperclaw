@@ -40,7 +40,7 @@
 | | |
 |---|---|
 | [Why HyperClaw?](#why-hyperclaw) | [Use cases](#use-cases) |
-| [Screenshots](#screenshots) | [🚀 Get started in 60 seconds](#-get-started-in-60-seconds) |
+| [Screenshots](#screenshots) · [📸 Full Gallery](SCREENSHOTS.md) | [🚀 Get started in 60 seconds](#-get-started-in-60-seconds) |
 | [▶️ Running your bot](#️-running-your-bot) | [Channels](#channels) |
 | [Architecture](#architecture) | [AI Models](#ai-models) |
 | [Channels](#channels) | [Configuration](#configuration) |
@@ -96,131 +96,37 @@
 
 ## Screenshots
 
-### Main banner (`hyperclaw`)
-
+### Main banner
+```bash
+hyperclaw
+```
 <div align="center">
-  <img src="assets/screenshot-banner.png" width="700" alt="HyperClaw main banner with quick actions">
+  <img src="assets/screenshot-banner.png" width="720" alt="HyperClaw main banner with quick actions">
 </div>
 
 ---
 
-### Daemon mode (`hyperclaw daemon start`)
-
+### 🕵️ OSINT / Ethical Hacking mode
+```bash
+hyperclaw osint
+hyperclaw osint setup    # interactive session setup
+hyperclaw osint --show   # show current profile
+```
 <div align="center">
-  <img src="assets/screenshot-daemon-mode.png" width="700" alt="HyperClaw daemon mode — ALWAYS WATCHING">
+  <img src="assets/screenshot-osint.png" width="720" alt="HyperClaw OSINT mode — recon, bugbounty, pentest workflows">
 </div>
 
-> Red `🩸 DAEMON MODE - ALWAYS WATCHING 🩸` banner activates when running with full PC access.  
-> After starting, open `http://127.0.0.1:18789/chat` in your browser to chat with the agent.
+> Passive recon · Bug bounty · Pentest · Digital footprint — all from your terminal.  
+> For authorized security research only. Always have written permission.
 
 ---
 
-### Setup wizard — start (`hyperclaw onboard`)
-
 <div align="center">
-  <img src="assets/screenshot-onboard-start.png" width="700" alt="HyperClaw onboard wizard start">
+
+**👉 See all screenshots — wizard, dashboard, web UI, chat, themes, security and more:**  
+**[📸 Full Screenshots Gallery →](SCREENSHOTS.md)**
+
 </div>
-
----
-
-### Setup wizard — AI providers
-
-<div align="center">
-  <img src="assets/screenshot-onboard-providers.png" width="700" alt="HyperClaw onboard AI provider selection">
-</div>
-
----
-
-### Setup wizard — API key step
-
-<div align="center">
-  <img src="assets/screenshot-onboard-apikey.png" width="700" alt="HyperClaw onboard API key entry">
-</div>
-
----
-
-### Daemon install mode (`hyperclaw onboard --install-daemon`)
-
-<div align="center">
-  <img src="assets/screenshot-onboard-daemon.png" width="700" alt="HyperClaw daemon install mode">
-</div>
-
----
-
-### Security notice
-
-<div align="center">
-  <img src="assets/screenshot-security-notice.png" width="700" alt="HyperClaw security notice screen">
-</div>
-
----
-
-### Theme selection
-
-<div align="center">
-  <img src="assets/screenshot-theme-select.png" width="700" alt="HyperClaw color theme selector">
-</div>
-
----
-
-### Gateway Dashboard (`hyperclaw dashboard`)
-
-<div align="center">
-  <img src="assets/screenshot-dashboard.png" width="700" alt="HyperClaw Gateway Dashboard TUI">
-</div>
-
-> Live status, active channels, installed skills, and logs. Press `[d]` daemon · `[h]` hub · `[g]` gateway · `[m]` memory · `[q]` quit.
-
----
-
-### Terminal chat (`hyperclaw chat`)
-
-<div align="center">
-  <img src="assets/screenshot-chat.png" width="700" alt="HyperClaw terminal chat interface">
-</div>
-
----
-
-### All commands (`hyperclaw --help`)
-
-<div align="center">
-  <img src="assets/screenshot-help.png" width="700" alt="HyperClaw --help output showing all commands">
-</div>
-
----
-
-### System status (`hyperclaw status`)
-
-<div align="center">
-  <img src="assets/screenshot-status.png" width="700" alt="HyperClaw status output">
-</div>
-
----
-
-### Health check (`hyperclaw health`)
-
-<div align="center">
-  <img src="assets/screenshot-health.png" width="700" alt="HyperClaw health check output">
-</div>
-
----
-
-### Security tools (`hyperclaw security`)
-
-<div align="center">
-  <img src="assets/screenshot-security.png" width="700" alt="HyperClaw security tools">
-</div>
-
----
-
-### OSINT / Ethical Hacking mode (`hyperclaw osint`)
-
-<div align="center">
-  <img src="assets/screenshot-osint.png" width="700" alt="HyperClaw OSINT mode with recon, bugbounty, pentest workflows">
-</div>
-
-> Passive recon, bug bounty, pentest, digital footprint — all from your terminal.  
-> For authorized security research only.
 
 <div align="right"><a href="#top">▲ Back to top</a></div>
 
