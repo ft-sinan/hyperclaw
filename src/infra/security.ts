@@ -14,12 +14,12 @@ const DISCLAIMER_TEXT = `
   A bad prompt can trick your AI agent into doing unsafe things.
   By continuing, you acknowledge the following risks:
 
-  ${chalk.yellow('•')} ${chalk.white('Prompt injection:')} Malicious users may try to override your agent's behavior
-  ${chalk.yellow('•')} ${chalk.white('Channel pairing:')} Use allowlists to restrict who can DM your agent
-  ${chalk.yellow('•')} ${chalk.white('Sandbox & least privilege:')} Only enable skills your agent actually needs
-  ${chalk.yellow('•')} ${chalk.white('Keep secrets out:')} Never put API keys in prompts or messages
-  ${chalk.yellow('•')} ${chalk.white('Use strongest model:')} Capable models are harder to jailbreak
-  ${chalk.yellow('•')} ${chalk.white('Gateway auth token:')} Always set a strong token — never leave it blank
+  🧠 ${chalk.white('Prompt injection:')} Malicious users may try to override your agent's behavior
+  🔒 ${chalk.white('Channel pairing:')} Use allowlists to restrict who can DM your agent
+  🧩 ${chalk.white('Sandbox & least privilege:')} Only enable skills your agent actually needs
+  🔑 ${chalk.white('Keep secrets out:')} Never put API keys in prompts or messages
+  🤖 ${chalk.white('Use strongest model:')} Capable models are harder to jailbreak
+  🛡️  ${chalk.white('Gateway auth token:')} Always set a strong token — never leave it blank
 
   This software is ${chalk.bold('inherently powerful and inherently risky')}.
   You are responsible for how your agent behaves.
@@ -53,6 +53,22 @@ export async function showSecurityDisclaimer(): Promise<boolean> {
 export async function configureDMPolicy(channelName: string): Promise<DMPolicyConfig> {
   console.log(chalk.cyan(`\n  📨 DM Policy for ${channelName}\n`));
   console.log(chalk.gray('  Who is allowed to send direct messages to your agent?\n'));
+
+  // Optional: if user provides their ID, use allowlist immediately — no pairing needed
+  const { myUserId } = await inquirer.prompt([{
+    type: 'input',
+    name: 'myUserId',
+    message: 'Your user ID (optional — add yourself to allowlist, skip pairing):',
+    default: ''
+  }]);
+  const trimmedId = (myUserId || '').trim();
+  if (trimmedId) {
+    const ids = trimmedId.split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (ids.length > 0) {
+      console.log(chalk.green(`\n  ✅ Your ID(s) added to allowlist — no pairing needed for you.\n`));
+      return { policy: 'allowlist', allowFrom: ids };
+    }
+  }
 
   const { policy } = await inquirer.prompt([{
     type: 'list',

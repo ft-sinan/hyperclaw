@@ -8,8 +8,25 @@ import readline from 'readline';
 import chalk from 'chalk';
 import ora from 'ora';
 import fs from 'fs-extra';
+import path from 'path';
+import { spawn } from 'child_process';
+import { marked } from 'marked';
+import TerminalRenderer from 'marked-terminal';
 import { getConfigPath, resolveTools, loadWorkspaceContext, loadSkillsContext, InferenceEngine } from '../../packages/core/src/index';
 import type { InferenceMessage } from '../../packages/core/src/agent/inference';
+
+// Markdown → terminal renderer (set once at startup)
+marked.setOptions({ renderer: new TerminalRenderer({ emoji: true }) as any });
+
+function renderMarkdown(text: string): string {
+  try {
+    const rendered = marked(text) as string;
+    // Indent by 2 spaces to align with chat style
+    return rendered.split('\n').map(l => '  ' + l).join('\n').trimEnd();
+  } catch {
+    return '  ' + text;
+  }
+}
 
 const DIVIDER = chalk.gray('  ' + '─'.repeat(56));
 
@@ -20,7 +37,7 @@ function printHeader(model: string, sessionId: string): void {
   console.log(chalk.gray(`  Model: ${model}  ·  Session: ${sessionId}`));
   console.log(DIVIDER);
   console.log(chalk.gray('  Type your message and press Enter.'));
-  console.log(chalk.gray('  Commands: /exit  /clear  /model [id]  /skills  /help'));
+  console.log(chalk.gray('  Commands: /exit  /clear  /model  /prompt  /skill add|remove|list  /help'));
   console.log(DIVIDER);
   console.log();
 }
@@ -28,15 +45,23 @@ function printHeader(model: string, sessionId: string): void {
 function printHelp(): void {
   console.log();
   console.log(chalk.bold('  Commands:'));
-  console.log(`  ${chalk.cyan('/exit')}    — quit the chat`);
-  console.log(`  ${chalk.cyan('/clear')}   — clear conversation history`);
-  console.log(`  ${chalk.cyan('/model')}           — show current model`);
-  console.log(`  ${chalk.cyan('/model <id>')}      — switch model (e.g. /model claude-sonnet-4-5)`);
-  console.log(`  ${chalk.cyan('/skills')}  — list installed skills + how to add more`);
-  console.log(`  ${chalk.cyan('/help')}    — show this help`);
+  console.log(`  ${chalk.cyan('/exit')}                  — 🚪 quit the chat`);
+  console.log(`  ${chalk.cyan('/clear')}                 — 🗑️  clear conversation history`);
+  console.log(`  ${chalk.cyan('/model')}                 — 🤖 show / switch model`);
+  console.log(`  ${chalk.cyan('/model <id>')}            — 🤖 switch model (e.g. /model claude-sonnet-4-5)`);
+  console.log(`  ${chalk.cyan('/prompt')}                — 📝 show current session prompt`);
+  console.log(`  ${chalk.cyan('/prompt <text>')}         — 📝 add extra instructions for this session`);
+  console.log(`  ${chalk.cyan('/prompt clear')}          — 🧹 remove extra instructions`);
+  console.log(`  ${chalk.cyan('/skills')}                — 🧩 list installed skills`);
+  console.log(`  ${chalk.cyan('/skill add <id>')}        — ➕ activate a skill for this session`);
+  console.log(`  ${chalk.cyan('/skill remove <id>')}     — ➖ deactivate a skill`);
+  console.log(`  ${chalk.cyan('/help')}                  — ❓ show this help`);
   console.log();
-  console.log(chalk.gray('  Tip: you can also tell the agent to install a skill:'));
-  console.log(chalk.gray('  "Install the web-search skill" or paste a clawhub.ai link'));
+  console.log(chalk.gray('  💡 Tips:'));
+  console.log(chalk.gray('  • Tell the agent: "Install the web-search skill"'));
+  console.log(chalk.gray('  • Paste a skill link: "Install this: https://clawhub.ai/user/skill-name"'));
+  console.log(chalk.gray('  • Set a session goal: /prompt You are a senior backend engineer. Be concise.'));
+  console.log(chalk.gray('  • Add to memory: "Remember that I prefer TypeScript"'));
   console.log();
 }
 
@@ -48,9 +73,9 @@ async function printSkills(): Promise<void> {
     if (skills.length === 0) {
       console.log(chalk.gray('  No skills installed yet.'));
     } else {
-      console.log(chalk.bold('  Installed skills:'));
+      console.log(chalk.bold('  🧩 Installed skills:'));
       for (const s of skills) {
-        console.log(`  ${chalk.cyan('•')} ${chalk.bold(s.title || s.id)} ${chalk.gray(`(${s.id})`)}`);
+        console.log(`  ${chalk.cyan('🔹')} ${chalk.bold(s.title || s.id)} ${chalk.gray(`(${s.id})`)}`);
         if (s.capabilities) console.log(chalk.gray(`    ${s.capabilities}`));
       }
     }
@@ -66,6 +91,59 @@ async function printSkills(): Promise<void> {
   console.log(`  ${chalk.gray('3.')} CLI (outside chat): ${chalk.cyan('hyperclaw skill install <name>')}`);
   console.log(`  ${chalk.gray('4.')} Re-run wizard:      ${chalk.cyan('hyperclaw onboard')}`);
   console.log();
+}
+
+async function interactiveChatUpdateCheck(): Promise<void> {
+  try {
+    const { checkForUpdates } = await import('../infra/update-check');
+    const pkgPath = path.join(__dirname, '../../package.json');
+    const pkg = await fs.readJson(pkgPath).catch(() => null);
+    const current = pkg?.version ?? '0.0.0';
+
+    const result = await checkForUpdates(current);
+    if (!result?.available) return;
+
+    console.log();
+    console.log(chalk.yellow(`  🦅 New version available! `) + chalk.bold.white(result.latest) + chalk.gray(`  (you have ${current})`));
+    console.log(chalk.gray(`  📦 npm install -g hyperclaw@latest`));
+    console.log();
+
+    const inquirer = (await import('inquirer')).default;
+    const { choice } = await inquirer.prompt([{
+      type: 'list',
+      name: 'choice',
+      message: chalk.cyan('What would you like to do?'),
+      choices: [
+        { name: `🚀  Update now   ${chalk.gray('(recommended)')}`, value: 'update' },
+        { name: `⏭️   Skip for later`, value: 'skip' },
+      ],
+      prefix: '  ✨',
+    }]);
+
+    if (choice === 'skip') {
+      console.log(chalk.gray(`\n  ⏭️  Skipping — run: npm install -g hyperclaw@latest when ready.\n`));
+      return;
+    }
+
+    console.log(chalk.cyan('\n  ⏳ Updating HyperClaw...\n'));
+    await new Promise<void>((resolve) => {
+      const proc = spawn('npm', ['install', '-g', 'hyperclaw@latest'], {
+        stdio: 'inherit',
+        shell: true,
+      });
+      proc.on('close', (code) => {
+        if (code === 0) {
+          console.log(chalk.green(`\n  ✅ Updated to ${result.latest} — starting chat...\n`));
+        } else {
+          console.log(chalk.red(`\n  ❌ Update failed (exit ${code}). Starting chat anyway...\n`));
+        }
+        resolve();
+      });
+      proc.on('error', () => resolve());
+    });
+  } catch {
+    // silently skip — never block chat startup on update check failure
+  }
 }
 
 function makeSessionId(): string {
@@ -112,7 +190,7 @@ export async function runChat(opts: {
   const maxTokens = thinkingBudget > 0 ? thinkingBudget + 4096 : 4096;
 
   // Build context + tools (once, reused for entire session)
-  const context = (await loadWorkspaceContext(opts.workspace)) + (await loadSkillsContext());
+  const baseContext = (await loadWorkspaceContext(opts.workspace)) + (await loadSkillsContext());
 
   const tools = await resolveTools({
     config: cfg,
@@ -121,11 +199,27 @@ export async function runChat(opts: {
     daemonMode: false,
   });
 
+  // Session-level prompt customization
+  let sessionExtraPrompt = '';
+  const sessionActiveSkills = new Map<string, string>(); // id → context snippet
+
+  function buildSystemPrompt(): string {
+    let sys = baseContext;
+    if (sessionExtraPrompt) sys += `\n\n## Session Instructions\n${sessionExtraPrompt}`;
+    if (sessionActiveSkills.size > 0) {
+      sys += `\n\n## Session Skills\n`;
+      for (const [id, ctx] of sessionActiveSkills) {
+        sys += `### ${id}\n${ctx}\n\n`;
+      }
+    }
+    return sys || '';
+  }
+
   const engineOpts: any = {
     model,
     apiKey,
     provider,
-    system: context || undefined,
+    system: buildSystemPrompt() || undefined,
     tools,
     maxTokens,
     onToken: () => {},
@@ -146,13 +240,11 @@ export async function runChat(opts: {
 
   printHeader(rawModel, sessionId);
 
-  // Non-blocking update check — shows notice before first prompt if update available
-  try {
-    const { maybeShowUpdateNotice } = await import('../infra/update-check');
-    maybeShowUpdateNotice();
-  } catch {}
+  // Interactive update check — prompt user before entering chat
+  await interactiveChatUpdateCheck();
 
-  // Set up readline
+  // Set up readline — ensure stdin stays in flowing mode (fixes early close on Windows/some terminals)
+  if (process.stdin.isTTY) process.stdin.resume();
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -169,8 +261,12 @@ export async function runChat(opts: {
   await new Promise<void>((resolve) => {
   rl.on('close', resolve);
 
+  const INPUT_PROMPT = chalk.gray('  Message HyperClaw — type and press Enter to send › ');
   const prompt = () => {
-    rl.question(chalk.bold.green('  You › '), async (input) => {
+    rl.question(INPUT_PROMPT, (input) => {
+      // stdin EOF (null) — keep prompting instead of exiting
+      if (input === null || input === undefined) { prompt(); return; }
+      void (async () => {
       const text = input.trim();
 
       if (!text) { prompt(); return; }
@@ -188,7 +284,7 @@ export async function runChat(opts: {
         if (newModelArg) {
           rawModel = newModelArg;
           engineOpts.model = rawModel.startsWith('ollama/') ? rawModel.slice(7) : rawModel;
-          console.log(chalk.green(`\n  ✔ Model switched to: ${chalk.bold(rawModel)}\n`));
+          console.log(chalk.green(`\n  🤖 Model switched to: ${chalk.bold(rawModel)}\n`));
         } else if (providerMeta?.models?.length) {
           // Arrow-key selection via inquirer
           rl.pause();
@@ -209,7 +305,7 @@ export async function runChat(opts: {
             }]);
             rawModel = selected;
             engineOpts.model = rawModel.startsWith('ollama/') ? rawModel.slice(7) : rawModel;
-            console.log(chalk.green(`\n  ✔ Model switched to: ${chalk.bold(rawModel)}\n`));
+            console.log(chalk.green(`\n  🤖 Model switched to: ${chalk.bold(rawModel)}\n`));
           } catch {
             console.log(chalk.gray('\n  Selection failed. Use: /model <model-id>  (e.g. claude-sonnet-4-5)\n'));
           } finally {
@@ -223,64 +319,154 @@ export async function runChat(opts: {
       }
       if (text === '/clear') {
         messages.length = 0;
-        console.log(chalk.gray('\n  Conversation cleared.\n'));
+        console.log(chalk.gray('\n  🗑️  Conversation cleared.\n'));
+        prompt(); return;
+      }
+
+      // ── /prompt ─────────────────────────────────────────────────────────────
+      if (text === '/prompt' || text.startsWith('/prompt ')) {
+        const arg = text.slice(7).trim();
+        if (!arg) {
+          console.log();
+          if (sessionExtraPrompt) {
+            console.log(chalk.bold('  📝 Session prompt:'));
+            console.log(chalk.white(`  ${sessionExtraPrompt.slice(0, 400)}${sessionExtraPrompt.length > 400 ? '…' : ''}`));
+          } else {
+            console.log(chalk.gray('  📝 No extra prompt set. Use: /prompt <text>'));
+          }
+          console.log();
+        } else if (arg === 'clear') {
+          sessionExtraPrompt = '';
+          engineOpts.system = buildSystemPrompt() || undefined;
+          console.log(chalk.green('\n  🧹 Extra prompt cleared.\n'));
+        } else {
+          sessionExtraPrompt = arg;
+          engineOpts.system = buildSystemPrompt() || undefined;
+          console.log(chalk.green(`\n  ✅ Session prompt set: ${chalk.white(arg.slice(0, 60))}${arg.length > 60 ? '…' : ''}\n`));
+        }
+        prompt(); return;
+      }
+
+      // ── /skill ───────────────────────────────────────────────────────────────
+      if (text === '/skill' || text.startsWith('/skill ')) {
+        const arg = text.slice(6).trim();
+        const [subCmd, ...rest] = arg.split(/\s+/);
+        const skillId = rest.join(' ').trim();
+
+        if (!subCmd || subCmd === 'list') {
+          await printSkills(); prompt(); return;
+        }
+
+        if (subCmd === 'add') {
+          if (!skillId) {
+            console.log(chalk.gray('\n  Usage: /skill add <skill-id>\n'));
+            prompt(); return;
+          }
+          try {
+            const { loadSkills } = await import('../../packages/core/src/agent/skill-loader');
+            const allSkills = await loadSkills();
+            const found = allSkills.find(s => s.id === skillId || (s.title ?? '').toLowerCase() === skillId.toLowerCase());
+            if (!found) {
+              console.log(chalk.yellow(`\n  ⚠️  Skill "${skillId}" not found. Use /skills to list installed.\n`));
+            } else {
+              const ctx = [
+                found.title ? `**${found.title}**` : found.id,
+                found.capabilities ? found.capabilities : '',
+                (found as any).description ? (found as any).description : '',
+              ].filter(Boolean).join('\n');
+              sessionActiveSkills.set(found.id, ctx);
+              engineOpts.system = buildSystemPrompt() || undefined;
+              console.log(chalk.green(`\n  ✅ Skill activated: ${chalk.bold(found.title || found.id)}\n`));
+            }
+          } catch (e: any) {
+            console.log(chalk.red(`\n  ❌ Error loading skills: ${e?.message || String(e)}\n`));
+          }
+          prompt(); return;
+        }
+
+        if (subCmd === 'remove') {
+          if (!skillId) {
+            console.log(chalk.gray('\n  Usage: /skill remove <skill-id>\n'));
+            prompt(); return;
+          }
+          if (sessionActiveSkills.has(skillId)) {
+            sessionActiveSkills.delete(skillId);
+            engineOpts.system = buildSystemPrompt() || undefined;
+            console.log(chalk.green(`\n  ✅ Skill deactivated: ${skillId}\n`));
+          } else {
+            console.log(chalk.gray(`\n  ℹ️  Skill "${skillId}" is not active in this session.\n`));
+          }
+          prompt(); return;
+        }
+
+        console.log(chalk.gray('\n  ℹ️  Usage: /skill list | /skill add <id> | /skill remove <id>\n'));
         prompt(); return;
       }
 
       // Add user message to transcript
       messages.push({ role: 'user', content: text });
 
-      // Spinner while agent thinks
-      const spinner = ora({ text: chalk.gray('Thinking...'), color: 'cyan', prefixText: '  ' }).start();
+      // Echo user message with styling
+      console.log(chalk.gray('  ' + '─'.repeat(56)));
+      console.log(chalk.bold.green('  💬 You › ') + chalk.white(text));
+      console.log(chalk.gray('  ' + '─'.repeat(56)));
+
+      // Working indicator with elapsed time
       let responseText = '';
+      let elapsed = 0;
+      let ticker: ReturnType<typeof setInterval> | undefined;
+      const spinner = ora({ text: chalk.cyan(`  🤔 Thinking... (${elapsed}s • Ctrl+C to cancel)`), prefixText: '' }).start();
+      ticker = setInterval(() => {
+        elapsed++;
+        spinner.text = chalk.cyan(`  🤔 Thinking... (${elapsed}s • Ctrl+C to cancel)`);
+      }, 1000);
 
       try {
-        let prefixPrinted = false;
         const engine = new InferenceEngine({
           ...engineOpts,
-          onToken: (token: string) => {
-            if (spinner.isSpinning) spinner.stop();
-            if (!prefixPrinted) {
-              process.stdout.write(chalk.bold.blue('\n  Agent › '));
-              prefixPrinted = true;
-            }
-            process.stdout.write(token);
+          onToken: () => {
+            // Buffer silently — we render the complete response as markdown after run()
+            if (spinner.isSpinning) spinner.text = chalk.cyan(`  📥 Receiving... (${elapsed}s • Ctrl+C to cancel)`);
           },
           onToolCall: (name: string) => {
-            if (spinner.isSpinning) spinner.stop();
-            console.log(chalk.gray(`\n  [tool: ${name}]`));
-            prefixPrinted = false; // reset so "Agent ›" prints again after tool
+            spinner.stop();
+            console.log(chalk.yellow(`\n  🔧 ${chalk.bold(name)}`));
+            spinner.start(chalk.cyan(`  ⚙️  Working (${elapsed}s • Ctrl+C to cancel)`));
           },
         });
 
         const result = await engine.run(messages);
         responseText = result.text || '';
-
+        if (ticker) clearInterval(ticker);
         spinner.stop();
-        // If no tokens were streamed (non-streaming provider), print now
-        if (!prefixPrinted) {
-          process.stdout.write(chalk.bold.blue('\n  Agent › '));
-          process.stdout.write(responseText || chalk.gray('(empty — try rephrasing or check model/tools)'));
-        } else if (!responseText) {
-          process.stdout.write(chalk.gray('(empty — try rephrasing or check model/tools)'));
+
+        console.log(chalk.bold.blue('\n  🦅 Agent ›'));
+        if (responseText) {
+          process.stdout.write(renderMarkdown(responseText));
+        } else {
+          process.stdout.write(chalk.gray('  (empty — try rephrasing or check model/tools)'));
         }
         console.log('\n');
+        console.log(chalk.gray('  ' + '─'.repeat(56)));
 
         if (result.usage) {
-          console.log(chalk.gray(`  Tokens — in: ${result.usage.input}  out: ${result.usage.output}\n`));
+          console.log(chalk.gray(`  📊 Tokens in: ${result.usage.input}  out: ${result.usage.output}  ·  ${rawModel}\n`));
+        } else {
+          console.log();
         }
       } catch (e: any) {
+        if (ticker) clearInterval(ticker);
         spinner.stop();
         const msg = e?.message || String(e);
         responseText = `Error: ${msg}`;
         console.log(chalk.red(`\n  Error: ${msg}\n`));
         const hint = (() => {
-          if (/401|unauthorized|invalid.*key|authentication/i.test(msg)) return 'Check API key: hyperclaw config set-key';
-          if (/429|rate.?limit|quota/i.test(msg)) return 'Rate limited. Wait a moment and retry.';
-          if (/500|503|service.?unavailable/i.test(msg)) return 'Provider temporarily down. Try again later.';
-          if (/network|ECONNREFUSED|ETIMEDOUT|fetch failed/i.test(msg)) return 'Network error. Check connection and base URL.';
-          if (/model|not found|invalid model/i.test(msg)) return 'Try: /model <id> to switch model.';
-          return 'Run: hyperclaw doctor  for setup checks.';
+          if (/401|unauthorized|invalid.*key|authentication/i.test(msg)) return '🔑 Check API key: hyperclaw config set-key';
+          if (/429|rate.?limit|quota/i.test(msg)) return '⏱️  Rate limited. Wait a moment and retry.';
+          if (/500|503|service.?unavailable/i.test(msg)) return '🔌 Provider temporarily down. Try again later.';
+          if (/network|ECONNREFUSED|ETIMEDOUT|fetch failed/i.test(msg)) return '🌐 Network error. Check connection and base URL.';
+          if (/model|not found|invalid model/i.test(msg)) return '🤖 Try: /model <id> to switch model.';
+          return '🩺 Run: hyperclaw doctor  for setup checks.';
         })();
         console.log(chalk.gray(`  ${hint}\n`));
       }
@@ -298,6 +484,10 @@ export async function runChat(opts: {
       }
 
       prompt();
+      })().catch((err) => {
+        console.error(chalk.red('\n  Unexpected error:'), err?.message || err);
+        prompt();
+      });
     });
   };
 

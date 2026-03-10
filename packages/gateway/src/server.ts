@@ -12,6 +12,7 @@ import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 import type { GatewayDeps, SessionStoreLike } from './deps';
 
 let activeServer: GatewayServer | null = null;
@@ -363,7 +364,7 @@ export class GatewayServer {
 
     if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.2.7' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.2.8' }));
       return;
     }
 
@@ -565,6 +566,70 @@ export class GatewayServer {
         res.writeHead(500);
         res.end(JSON.stringify({ error: e.message }));
       }
+      return;
+    }
+    if (pathname === '/api/terminal' && req.method === 'POST') {
+      let body = '';
+      req.on('data', c => body += c);
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body || '{}');
+          const command = typeof parsed.command === 'string' ? parsed.command.trim() : '';
+          if (!command || command.length > 500) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: 'Invalid command' }));
+            return;
+          }
+
+          const shell = process.platform === 'win32'
+            ? (process.env.COMSPEC || 'cmd.exe')
+            : (process.env.SHELL || '/bin/bash');
+          const args = process.platform === 'win32'
+            ? ['/d', '/s', '/c', command]
+            : ['-lc', command];
+
+          // Run in process cwd so "Build" / npm run build works when gateway is started from project root
+          const cwd = process.cwd();
+          const child = spawn(shell, args, {
+            cwd,
+            env: process.env,
+          });
+
+          let stdout = '';
+          let stderr = '';
+          child.stdout.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+            if (stdout.length > 16000) stdout = stdout.slice(-16000);
+          });
+          child.stderr.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+            if (stderr.length > 8000) stderr = stderr.slice(-8000);
+          });
+          child.on('error', (e: Error) => {
+            res.writeHead(500);
+            res.end(JSON.stringify({ error: e.message || 'Failed to start shell' }));
+          });
+          child.on('close', (code: number | null) => {
+            try {
+              res.writeHead(200);
+              res.end(JSON.stringify({
+                ok: code === 0,
+                code,
+                stdout,
+                stderr,
+                user: os.userInfo().username,
+                hostname: os.hostname(),
+                cwd,
+              }));
+            } catch {
+              // ignore double responses
+            }
+          });
+        } catch (e: any) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: e.message || 'Failed to run command' }));
+        }
+      });
       return;
     }
     if (pathname === '/api/chat' && req.method === 'POST') {
@@ -788,7 +853,7 @@ export class GatewayServer {
     if (authToken && !session.authenticated) {
       this.send(session, { type: 'connect.challenge', sessionId: id });
     } else {
-      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.2.7', heartbeatInterval: 30000 });
+      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.2.8', heartbeatInterval: 30000 });
       if (this.config.hooks && this.config.deps.createHookLoader) {
         this.config.deps.createHookLoader().execute('session:start', { sessionId: id }).catch(() => {});
       }

@@ -16,6 +16,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.2.8] — 2026-03-10
+
+### Added
+- **User ID allowlist** — During DM policy setup, optional prompt to add your user ID immediately so you skip pairing (stored in allowFrom)
+- **Post-setup hatch flow** — After wizard: "How do you want to hatch your bot?" with TUI (recommended), Open Web UI, Do this later; each runs the chosen action (chat, open browser, or skip)
+- **Web UI terminal** — Local terminal panel below chat: run shell commands, quick buttons (Build, Install, Test, Doctor, Gateway status); `POST /api/terminal` in gateway
+- **Web UI improvements** — Dashboard hero card, chat header with New chat / Clear messages, prettier input placeholders
+- **Chat prompt/skill integration** — AGENTS.md rule: when user provides prompt in chat, integrate into SOUL.md; add skills via chat
+- **Daemon banner** — Daemon mode now uses red (daemonGradient) instead of cyan for the ASCII banner
+- **TUI chat** — Working (Xs) indicator, prettier input prompt, status line with HyperClaw · model · tokens
+
+### Fixed
+- **TUI chat early exit** — `process.stdin.resume()`, null/EOF handling, try/catch so chat stays open after responses
+- **Daemon banner color** — Banner gradient now switches to red when daemon mode is active
+
+### Changed
+- Wake-up message includes date and friendlier copy
+- Terminal API runs in `process.cwd()` so Build works when gateway is started from project root
+
+---
+
 ## [5.2.7] — 2026-03-09
 
 ### Security (CodeQL — High priority)

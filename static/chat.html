@@ -139,10 +139,10 @@
 <!-- INPUT -->
 <div class="input-wrap">
   <form class="input-row" id="form">
-    <textarea id="input" rows="1" placeholder="Message HyperClaw… (Enter to send, Shift+Enter for new line)" autocomplete="off"></textarea>
+    <textarea id="input" rows="1" placeholder="Your AI assistant awaits — type a message and press Enter to send · HyperClaw" autocomplete="off"></textarea>
     <button type="submit" id="send-btn">↑</button>
   </form>
-  <div class="input-hint">🦅 Hyper · <span id="model-hint">—</span></div>
+  <div class="input-hint">🦅 HyperClaw · <span id="model-hint">—</span></div>
 </div>
 
 <script>
@@ -270,17 +270,23 @@
     if (last) last.appendChild(t);
   }
 
+  let workingTicker = null;
   function addTyping() {
     welcomeEl.style.display = 'none';
     const row = document.createElement('div');
     row.className = 'msg-row assistant';
     row.id = 'typing-row';
-    row.innerHTML = '<div class="msg-avatar">🦅</div><div class="msg-bubble" style="padding:14px 18px"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+    let sec = 0;
+    row.innerHTML = '<div class="msg-avatar">🦅</div><div class="msg-bubble" style="padding:14px 18px"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> <span id="working-text" style="margin-left:8px;color:var(--text2);font-size:12px">Working (0s)</span></div>';
     messagesEl.appendChild(row);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+    workingTicker = setInterval(() => {
+      sec++; const el = document.getElementById('working-text'); if (el) el.textContent = 'Working (' + sec + 's)';
+    }, 1000);
   }
 
   function removeTyping() {
+    if (workingTicker) { clearInterval(workingTicker); workingTicker = null; }
     document.getElementById('typing-row')?.remove();
   }
 

@@ -104,16 +104,16 @@ export async function osintSetup(options: {
   if (options.show) {
     try {
       const profile: OsintProfile = await fs.readJson(getOsintProfileFile());
-      console.log(chalk.cyan.bold('  Current OSINT Profile:\n'));
-      console.log(`  Mode:    ${chalk.yellow(profile.mode)}`);
-      console.log(`  Target:  ${chalk.white(profile.target || '(not set)')}`);
-      console.log(`  Type:    ${profile.targetType || 'N/A'}`);
-      console.log(`  MCP:     ${profile.mcpServers.join(', ')}`);
-      console.log(`  Created: ${profile.createdAt}`);
-      if (profile.notes) console.log(`  Notes:   ${profile.notes}`);
+      console.log(chalk.cyan.bold('  🔍 Current OSINT Profile:\n'));
+      console.log(`  ⚙️  Mode:    ${chalk.yellow(profile.mode)}`);
+      console.log(`  🎯 Target:  ${chalk.white(profile.target || '(not set)')}`);
+      console.log(`  🏷️  Type:    ${profile.targetType || 'N/A'}`);
+      console.log(`  🔌 MCP:     ${profile.mcpServers.join(', ')}`);
+      console.log(`  🕐 Created: ${profile.createdAt}`);
+      if (profile.notes) console.log(`  📝 Notes:   ${profile.notes}`);
       console.log();
     } catch {
-      console.log(chalk.gray('  No OSINT profile saved yet. Run: hyperclaw osint setup\n'));
+      console.log(chalk.gray('  ℹ️  No OSINT profile saved yet. Run: hyperclaw osint setup\n'));
     }
     return;
   }
@@ -121,12 +121,15 @@ export async function osintSetup(options: {
   // Reset profile
   if (options.reset) {
     await fs.remove(getOsintProfileFile());
-    console.log(chalk.green('  ✔  OSINT profile cleared.\n'));
+    // Also remove the daemon workspace injection file if it exists
+    const osintActivePath = path.join(getHyperClawDir(), 'OSINT-ACTIVE.md');
+    await fs.remove(osintActivePath).catch(() => {});
+    console.log(chalk.green('  🧹 OSINT profile cleared.\n'));
     return;
   }
 
   // Interactive setup
-  console.log(chalk.bold('  Select OSINT workflow:\n'));
+  console.log(chalk.bold('  🔍 Select OSINT workflow:\n'));
   for (const [mode, desc] of Object.entries(MODE_DESCRIPTIONS)) {
     console.log(`  ${chalk.cyan(mode.padEnd(12))} ${chalk.gray(desc)}`);
   }
@@ -188,11 +191,11 @@ export async function osintSetup(options: {
   }]);
 
   if (!confirmed) {
-    console.log(chalk.red('\n  Aborted. OSINT mode requires authorization confirmation.\n'));
+    console.log(chalk.red('\n  🚫 Aborted. OSINT mode requires authorization confirmation.\n'));
     return;
   }
 
-  const spinner = ora('Applying OSINT configuration...').start();
+  const spinner = ora('⚙️  Applying OSINT configuration...').start();
 
   const mcpServers = MODE_MCP_SERVERS[mode];
   const systemPrompt = MODE_SYSTEM_PROMPTS[mode];
@@ -256,60 +259,67 @@ export async function osintSetup(options: {
   await fs.writeJson(mcpFile, mcpServersJson, { spaces: 2 });
   await fs.writeJson(getConfigFile(), config, { spaces: 2 });
 
-  spinner.succeed('OSINT configuration applied');
+  spinner.succeed('✅ OSINT configuration applied');
 
   console.log();
-  console.log(chalk.bold.cyan('  ✔  HyperClaw is now in OSINT mode:\n'));
-  console.log(`  Workflow: ${chalk.yellow(mode)}`);
-  if (target) console.log(`  Target:   ${chalk.white(target)} ${chalk.gray(`(${targetType})`)}`);
-  console.log(`  MCP:      ${chalk.cyan(mcpServers.join(', '))}`);
+  console.log(chalk.bold.red('  🩸 OSINT mode ready:'));
+  console.log(`  ⚙️  Workflow: ${chalk.yellow(mode)}`);
+  if (target) console.log(`  🎯 Target:   ${chalk.white(target)} ${chalk.gray(`(${targetType})`)}`);
+  console.log(`  🔌 MCP:      ${chalk.cyan(mcpServers.join(', '))}`);
   console.log();
-  console.log(chalk.bold('  Start your session:'));
-  console.log(`  ${chalk.cyan('hyperclaw daemon start')}           — start the assistant`);
-  console.log(`  ${chalk.cyan('hyperclaw agent --message "..."')} — send a message from CLI`);
-  console.log();
-  console.log(chalk.bold('  Example prompts:'));
-  if (mode === 'recon' && target) {
-    console.log(chalk.gray(`  "Perform passive recon on ${target}: WHOIS, DNS, subdomains"`));
-    console.log(chalk.gray(`  "Find all public GitHub repos for ${target}"`));
-    console.log(chalk.gray(`  "Search for email addresses associated with ${target}"`));
-  } else if (mode === 'bugbounty') {
-    console.log(chalk.gray(`  "What are common vulnerabilities in web login forms?"`));
-    console.log(chalk.gray(`  "Draft a bug bounty report for an XSS vulnerability"`));
-    console.log(chalk.gray(`  "Help me test for SSRF on the /api/fetch endpoint"`));
-  } else if (mode === 'pentest') {
-    console.log(chalk.gray(`  "Create a pentest report template for a web application"`));
-    console.log(chalk.gray(`  "What ports should I check on a Linux server?"`));
-    console.log(chalk.gray(`  "Explain how to test for SQLi safely in a controlled environment"`));
-  } else if (mode === 'footprint') {
-    console.log(chalk.gray(`  "Search for the digital footprint of the username 'target_user'"`));
-    console.log(chalk.gray(`  "Check HaveIBeenPwned for emails from domain example.com"`));
+
+  // Ask user if they want to launch the OSINT chat now
+  const { launchNow } = await inquirer.prompt<{ launchNow: boolean }>([{
+    type: 'confirm',
+    name: 'launchNow',
+    message: chalk.red('🔍 Launch OSINT chat session now?'),
+    default: true,
+  }]);
+
+  if (!launchNow) {
+    console.log(chalk.gray('\n  🚀 Run: hyperclaw osint chat  — to start your session later.'));
+    console.log(chalk.gray('  👁️  To view profile: hyperclaw osint --show'));
+    console.log(chalk.gray('  🧹 To reset:        hyperclaw osint --reset\n'));
+    return;
   }
-  console.log();
-  console.log(chalk.gray('  To view profile: hyperclaw osint --show'));
-  console.log(chalk.gray('  To reset:        hyperclaw osint --reset'));
-  console.log();
+
+  const { runOsintChat } = await import('../cli/osint-chat');
+  await runOsintChat({});
 }
 
 export async function osintQuickStart(mode?: string): Promise<void> {
   printBanner();
-  console.log(chalk.bold('  Available OSINT workflows:\n'));
+  console.log(chalk.bold('  🔍 Available OSINT workflows:\n'));
+  const workflowEmojis: Record<string, string> = {
+    recon:     '🌐',
+    bugbounty: '🐛',
+    pentest:   '🔭',
+    footprint: '👤',
+    custom:    '🔧',
+  };
   for (const [m, desc] of Object.entries(MODE_DESCRIPTIONS)) {
     const isActive = m === mode;
     const bullet = isActive ? chalk.green('▶') : chalk.gray('○');
-    console.log(`  ${bullet} ${chalk.cyan(m.padEnd(12))} ${chalk.white(desc)}`);
+    const emoji = workflowEmojis[m] ?? '•';
+    console.log(`  ${bullet} ${emoji} ${chalk.cyan(m.padEnd(12))} ${chalk.white(desc)}`);
   }
   console.log();
-  console.log(chalk.bold('  Commands:\n'));
-  console.log(`  ${chalk.cyan('hyperclaw osint setup')}           — interactive OSINT session setup`);
-  console.log(`  ${chalk.cyan('hyperclaw osint --show')}          — show current profile`);
-  console.log(`  ${chalk.cyan('hyperclaw osint --reset')}         — clear OSINT profile`);
+  console.log(chalk.bold('  📋 Commands:\n'));
+  console.log(`  ${chalk.cyan('hyperclaw osint setup')}           — ⚙️  interactive OSINT session setup`);
+  console.log(`  ${chalk.cyan('hyperclaw osint chat')}            — 💬 start OSINT chat session`);
+  console.log(`  ${chalk.cyan('hyperclaw osint --show')}          — 👁️  show current profile`);
+  console.log(`  ${chalk.cyan('hyperclaw osint --reset')}         — 🧹 clear OSINT profile`);
   console.log();
-  console.log(chalk.bold('  MCP servers for OSINT:\n'));
-  console.log(`  ${chalk.cyan('mcp-browser')}    — web_fetch, web_search, dns_lookup, whois_lookup, extract_links`);
-  console.log(`  ${chalk.cyan('mcp-filesystem')} — read_file, write_file, search_files (for saving reports)`);
-  console.log(`  ${chalk.cyan('mcp-github')}     — list_repos, search_code, get_file`);
-  console.log(`  ${chalk.cyan('mcp-terminal')}   — run_command (pentest mode only, requires authorization)`);
+  console.log(chalk.bold.red('  🩸 Daemon mode (full shell/tool access):\n'));
+  console.log(`  ${chalk.gray('1.')} ${chalk.cyan('hyperclaw daemon start')}          — 🩸 start the daemon (keep running)`);
+  console.log(`  ${chalk.gray('2.')} ${chalk.cyan('hyperclaw osint chat')}            — 🔍 auto-connects to daemon`);
+  console.log(`  ${chalk.gray('   ')} ${chalk.gray('🔧 Gives: nmap, curl, dig, whois, msfconsole, dirb, nikto, sqlmap...')}`);
+  console.log();
+  console.log(chalk.bold('  🔌 MCP servers for OSINT:\n'));
+  console.log(`  ${chalk.cyan('mcp-browser')}    — 🌐 web_fetch, web_search, dns_lookup, whois_lookup, extract_links`);
+  console.log(`  ${chalk.cyan('mcp-filesystem')} — 📁 read_file, write_file, search_files (for saving reports)`);
+  console.log(`  ${chalk.cyan('mcp-github')}     — 🐙 list_repos, search_code, get_file`);
+  console.log(`  ${chalk.cyan('mcp-terminal')}   — 💻 run_command (pentest mode only, requires authorization)`);
   console.log();
   console.log(chalk.yellow('  ⚠️  Always operate within authorized scope and applicable laws.\n'));
 }

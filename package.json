@@ -1,6 +1,6 @@
 {
   "name": "hyperclaw",
-  "version": "5.2.7",
+  "version": "5.2.8",
   "description": "⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅",
   "main": "dist/run-main.js",
   "bin": {
@@ -100,6 +100,8 @@
     "fs-extra": "^11.2.0",
     "gradient-string": "^2.0.2",
     "inquirer": "^8.2.7",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
     "node-cron": "^3.0.3",
     "ora": "^5.4.1",
     "tar": "^7.0.0",
@@ -119,6 +121,7 @@
     "@types/figlet": "^1.5.8",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^8.2.10",
+    "@types/marked-terminal": "^6.1.1",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.8",
     "@vitest/coverage-v8": "^1.6.0",

@@ -176,7 +176,17 @@ export class HyperClawWizard {
     const { hooks, heartbeat: heartbeatEnabled } = await this.configureSkillsAndHooks();
 
     this.stepHeader(7, STEPS, 'Launch');
-    // H5: QuickStart — offer daemon install/start so users know how to run the bot
+    const launchChoices: any[] = [
+      { name: `${chalk.yellow('Hatch in TUI')} (recommended)  — terminal chat`, value: 'tui' }
+    ];
+    if (gatewayConfig && !(gatewayConfig as any).remote) {
+      launchChoices.push({ name: `${chalk.cyan('Open the Web UI')} — browser at http://localhost:${(gatewayConfig as any).port}`, value: 'web' });
+    }
+    launchChoices.push({ name: chalk.gray('Do this later — I will start manually'), value: 'skip' });
+    const { hatchMode } = await inquirer.prompt([{
+      type: 'list', name: 'hatchMode', message: 'How do you want to hatch your bot?',
+      choices: launchChoices
+    }]);
     let installDaemon = options.installDaemon ?? false;
     let startNow = false;
     if (!installDaemon) {
@@ -240,7 +250,7 @@ export class HyperClawWizard {
       gatewayConfig, identity, hooks, heartbeatEnabled, webSearch,
       memoryIntegration, serviceApiKeys, hyperclawbotConfig, talkModeConfig,
       pcAccess, updateChannel, groupSandbox, rateLimit,
-      installDaemon, startNow
+      installDaemon, startNow, hatchMode
     }, options);
   }
 
@@ -348,10 +358,10 @@ export class HyperClawWizard {
 
     this.stepHeader(9, STEPS, 'Launch');
     const launchChoices: any[] = [
-      { name: 'Dashboard — terminal status', value: 'tui' }
+      { name: `${chalk.yellow('Hatch in TUI')} (recommended)  — terminal chat`, value: 'tui' }
     ];
     if (gatewayConfig && !(gatewayConfig as any).remote) {
-      launchChoices.push({ name: `Web  — browser at http://localhost:${(gatewayConfig as any).port}`, value: 'web' });
+      launchChoices.push({ name: `${chalk.cyan('Open the Web UI')} — browser at http://localhost:${(gatewayConfig as any).port}`, value: 'web' });
     }
     launchChoices.push({ name: chalk.gray('Do this later — I will start manually'), value: 'skip' });
     const { hatchMode } = await inquirer.prompt([{
@@ -1880,18 +1890,36 @@ export class HyperClawWizard {
 
     this.showSuccessScreen(data, healthResults.gateway === 'reachable');
 
-    // Offer to launch chat immediately after setup
-    const { launchChat } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'launchChat',
-      message: chalk.cyan('Launch HyperClaw Chat now?'),
-      default: true,
-    }]);
+    const hatchMode = data.hatchMode || 'tui';
 
-    if (launchChat) {
-      console.log(chalk.gray('\n  Starting chat...\n'));
+    if (hatchMode === 'tui') {
+      const agentName = data.identity?.agentName || 'HyperClaw';
+      const userName = data.identity?.userName || require('os').userInfo().username;
+      const now = new Date();
+      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      console.log(chalk.bold.cyan('\n  🌅 Wake up, my friend!\n'));
+      console.log(chalk.gray(`  ${dayName}, ${dateStr}`));
+      console.log(chalk.gray(`  I am ${agentName}. Hello, ${userName}.`));
+      console.log(chalk.gray('  Fresh out of the box — who are you, and who am I? What should we call each other?'));
+      console.log(chalk.gray('  (Refine in chat.)\n'));
+      console.log(chalk.gray('  Starting chat...\n'));
       const { runChat } = await import('./chat');
       await runChat({});
+    } else if (hatchMode === 'web' && data.gatewayConfig && !(data.gatewayConfig as any).remote) {
+      const port = (data.gatewayConfig as any).port ?? 18789;
+      const url = `http://localhost:${port}`;
+      const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+      const { execFile } = await import('child_process');
+      const { promisify } = await import('util');
+      try {
+        await promisify(execFile)(openCmd, [url], { timeout: 3000 });
+        console.log(chalk.green(`\n  Opened ${url} in your browser.\n`));
+      } catch {
+        console.log(chalk.gray(`\n  Open in browser: ${url}\n`));
+      }
+    } else if (hatchMode === 'skip') {
+      console.log(chalk.gray('\n  Run hyperclaw chat or open the Web UI when ready.\n'));
     }
   }
 
@@ -2377,34 +2405,34 @@ export class HyperClawWizard {
     const needsStart = data.gatewayConfig && !isRemoteMode && !gatewayReachable && channels.length > 0;
 
     const cmdLines = [
-      chalk.gray('  hyperclaw dashboard         Dashboard (terminal)'),
-      chalk.gray('  hyperclaw hub             — Skill hub'),
-      chalk.gray('  hyperclaw gateway status  — Gateway panel'),
-      chalk.gray('  hyperclaw ') + chalk.red('daemon') + chalk.gray(' status   — Service status'),
-      chalk.gray('  hyperclaw voice           — Voice settings'),
-      chalk.gray('  hyperclaw canvas show     — AI canvas'),
+      chalk.gray('  📊 hyperclaw dashboard         Dashboard (terminal)'),
+      chalk.gray('  🧩 hyperclaw hub             — Skill hub'),
+      chalk.gray('  🌐 hyperclaw gateway status  — Gateway panel'),
+      chalk.gray('  🩸 hyperclaw ') + chalk.red('daemon') + chalk.gray(' status   — Service status'),
+      chalk.gray('  🎙️  hyperclaw voice           — Voice settings'),
+      chalk.gray('  🎨 hyperclaw canvas show     — AI canvas'),
     ];
     if (needsStart) {
-      cmdLines.unshift(chalk.yellow('  hyperclaw daemon start       ') + chalk.bold('Start your bot (Telegram/Discord need this!)'));
+      cmdLines.unshift(chalk.yellow('  🚀 hyperclaw daemon start       ') + chalk.bold('Start your bot (Telegram/Discord need this!)'));
     }
-    if (hasHyperClawBot) cmdLines.push(chalk.gray('  hyperclaw bot start        — HyperClawBot remote control'));
-    if (hasEmail) cmdLines.push(chalk.gray('  hyperclaw gmail watch-setup — Gmail Pub/Sub (real-time)'));
-    cmdLines.push(chalk.gray('  hyperclaw nodes             — Mobile nodes (Connect tab)'));
-    cmdLines.push(chalk.gray('  hyperclaw cron list         — Scheduled tasks'));
+    if (hasHyperClawBot) cmdLines.push(chalk.gray('  🤖 hyperclaw bot start        — HyperClawBot remote control'));
+    if (hasEmail) cmdLines.push(chalk.gray('  📧 hyperclaw gmail watch-setup — Gmail Pub/Sub (real-time)'));
+    cmdLines.push(chalk.gray('  📱 hyperclaw nodes             — Mobile nodes (Connect tab)'));
+    cmdLines.push(chalk.gray('  ⏰ hyperclaw cron list         — Scheduled tasks'));
 
     const lines = [
-      `${chalk.gray('Agent:')}     ${chalk.hex('#06b6d4')(data.identity?.agentName)} (you: ${data.identity?.userName})`,
-      `${chalk.gray('Model:')}     ${data.providerConfig?.modelId}`,
-      `${chalk.gray('Provider:')} ${data.providerConfig?.providerId}`,
-      `${chalk.gray('Gateway:')}  ${gwUrl}`,
-      `${chalk.gray('Channels:')} ${channels.length ? channels.join(', ') : 'CLI only'}`,
+      `${chalk.gray('🤖 Agent:')}     ${chalk.hex('#06b6d4')(data.identity?.agentName)} (you: ${data.identity?.userName})`,
+      `${chalk.gray('⚡ Model:')}     ${data.providerConfig?.modelId}`,
+      `${chalk.gray('🔌 Provider:')} ${data.providerConfig?.providerId}`,
+      `${chalk.gray('🌐 Gateway:')}  ${gwUrl}`,
+      `${chalk.gray('📡 Channels:')} ${channels.length ? channels.join(', ') : 'CLI only'}`,
       '',
       chalk.hex('#06b6d4')('Commands:'),
       ...cmdLines,
     ].join('\n');
 
     console.log('\n' + boxen(
-      chalk.hex('#06b6d4')('🦅 HyperClaw v5.2.7 ready!\n\n') + lines,
+      chalk.hex('#06b6d4')('🦅 HyperClaw v5.2.8 ready!\n\n') + lines,
       { padding: 1, borderStyle: 'round', borderColor: 'cyan', margin: 1, backgroundColor: '#0a0a0a' }
     ));
   }

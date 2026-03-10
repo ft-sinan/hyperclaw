@@ -77,7 +77,7 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.2.7')
+  .version('5.2.8')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -780,7 +780,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.2.7")',
+      version: 'string (e.g. "5.2.8")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -1143,13 +1143,17 @@ securityCmd.command('audit')
 
 program.command('osint')
   .description('OSINT / Ethical Hacking mode — configure HyperClaw for security research')
-  .argument('[workflow]', 'Workflow preset: recon | bugbounty | pentest | footprint | custom')
+  .argument('[workflow]', 'Workflow preset: recon | bugbounty | pentest | footprint | custom | chat')
   .option('--show', 'Show current OSINT profile')
   .option('--reset', 'Clear OSINT profile and disable OSINT mode')
+  .option('--model <model>', 'Override model for OSINT chat')
   .action(async (workflow, opts) => {
     const { osintSetup, osintQuickStart } = await import('../commands/osint');
     if (opts.show || opts.reset) {
       await osintSetup({ show: opts.show, reset: opts.reset });
+    } else if (workflow === 'chat') {
+      const { runOsintChat } = await import('./osint-chat');
+      await runOsintChat({ model: opts.model });
     } else if (workflow === 'setup' || workflow) {
       await osintSetup({ mode: workflow as any });
     } else {

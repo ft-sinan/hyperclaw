@@ -13,6 +13,10 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const APP_VERSION = '5.2.8';
 
 // ─── Query client ─────────────────────────────────────────────────────────────
 
@@ -47,6 +51,15 @@ interface ChatMessage {
   toolCalls?: Array<{ name: string; result: string }>;
 }
 
+function createWelcomeMessage(): ChatMessage {
+  return {
+    id: '0',
+    role: 'assistant',
+    content: '🦅 **HyperClaw**\n\nWelcome to the HyperClaw Web Chat. Your gateway agent is ready — type a message to begin.',
+    timestamp: new Date().toISOString()
+  };
+}
+
 interface GatewayStatus {
   running: boolean;
   port: number;
@@ -64,6 +77,16 @@ interface CostSummary {
   totalCacheRead?: number;
   totalCostUsd?: number;
   totalRuns?: number;
+}
+
+interface TerminalResult {
+  ok: boolean;
+  code: number | null;
+  stdout: string;
+  stderr: string;
+  user?: string;
+  hostname?: string;
+  cwd?: string;
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -94,14 +117,8 @@ function useCostSummary() {
 
 function useChat() {
   const qc = useQueryClient();
-  const [messages, setMessages] = useState<ChatMessage[]>([{
-    id: '0',
-    role: 'assistant',
-    content: `🦅 **HyperClaw**\n\nReady. Gateway is running on port 18789.`,
-    timestamp: new Date().toISOString()
-  }]);
+  const [messages, setMessages] = useState<ChatMessage[]>([createWelcomeMessage()]);
   const [streaming, setStreaming] = useState(false);
-  const [streamBuffer, setStreamBuffer] = useState('');
 
   const sendMutation = useMutation({
     mutationFn: async ({ message, thinking }: { message: string; thinking: string }) => {
@@ -143,7 +160,10 @@ function useChat() {
     }
   });
 
-  return { messages, sendMutation, streaming };
+  const resetChat = () => setMessages([createWelcomeMessage()]);
+  const clearChat = () => setMessages([]);
+
+  return { messages, sendMutation, streaming, resetChat, clearChat };
 }
 
 // ─── Components ───────────────────────────────────────────────────────────────
@@ -181,7 +201,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (p: Page) => void }) 
           <span className="text-2xl">🦅</span>
           <div>
             <div className="text-sm font-bold text-red-400 tracking-wide">HyperClaw</div>
-            <div className="text-xs text-gray-500">v4.0.2</div>
+            <div className="text-xs text-gray-500">v{APP_VERSION}</div>
           </div>
         </div>
       </div>
@@ -231,14 +251,22 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (p: Page) => void }) 
 type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
 
 function ChatPage() {
-  const { messages, sendMutation, streaming } = useChat();
+  const { messages, sendMutation, streaming, resetChat, clearChat } = useChat();
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState<ThinkingLevel>('none');
+  const [workingSec, setWorkingSec] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, streaming]);
+
+  useEffect(() => {
+    if (!streaming) { setWorkingSec(0); return; }
+    setWorkingSec(0);
+    const t = setInterval(() => setWorkingSec(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [streaming]);
 
   const send = useCallback(() => {
     if (!input.trim() || sendMutation.isPending) return;
@@ -248,6 +276,29 @@ function ChatPage() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between bg-gradient-to-r from-gray-900 via-gray-950 to-gray-900">
+        <div>
+          <div className="text-xs text-gray-500 uppercase tracking-wider">HyperClaw</div>
+          <div className="text-sm font-semibold text-gray-100">Web Chat</div>
+          <div className="text-xs text-gray-500">Converse with your local gateway agent</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={resetChat}
+            className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-200 transition-colors"
+          >
+            New chat
+          </button>
+          <button
+            onClick={clearChat}
+            className="text-xs px-3 py-1.5 rounded-lg border border-red-900/60 bg-red-900/40 hover:bg-red-800 text-red-100 transition-colors"
+          >
+            Clear messages
+          </button>
+        </div>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map(msg => (
@@ -277,7 +328,33 @@ function ChatPage() {
                   ))}
                 </div>
               )}
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const isBlock = className?.includes('language-');
+                    return isBlock ? (
+                      <pre className="bg-gray-950 rounded-lg p-3 overflow-x-auto my-2 text-xs font-mono border border-gray-700">
+                        <code className={className}>{children}</code>
+                      </pre>
+                    ) : (
+                      <code className="bg-gray-950 rounded px-1.5 py-0.5 text-xs font-mono text-red-300" {...props}>{children}</code>
+                    );
+                  },
+                  a({ children, href }) {
+                    return <a href={href} target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">{children}</a>;
+                  },
+                  ul({ children }) { return <ul className="list-disc list-inside space-y-0.5 my-1">{children}</ul>; },
+                  ol({ children }) { return <ol className="list-decimal list-inside space-y-0.5 my-1">{children}</ol>; },
+                  strong({ children }) { return <strong className="font-bold text-white">{children}</strong>; },
+                  h1({ children }) { return <h1 className="text-base font-bold text-white mt-2 mb-1">{children}</h1>; },
+                  h2({ children }) { return <h2 className="text-sm font-bold text-white mt-2 mb-1">{children}</h2>; },
+                  h3({ children }) { return <h3 className="text-sm font-semibold text-gray-200 mt-1 mb-0.5">{children}</h3>; },
+                  blockquote({ children }) { return <blockquote className="border-l-2 border-gray-600 pl-3 text-gray-400 my-1">{children}</blockquote>; },
+                }}
+              >
+                {msg.content}
+              </ReactMarkdown>
               <div className="text-xs opacity-40 mt-1 text-right">
                 {new Date(msg.timestamp).toLocaleTimeString()}
               </div>
@@ -288,13 +365,14 @@ function ChatPage() {
         {streaming && (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-red-900/30 flex items-center justify-center text-sm">🦅</div>
-            <div className="bg-gray-800 rounded-2xl px-4 py-3 border border-gray-700">
+            <div className="bg-gray-800 rounded-2xl px-4 py-3 border border-gray-700 flex items-center gap-2">
               <div className="flex gap-1">
                 {[0, 1, 2].map(i => (
                   <div key={i} className="w-2 h-2 bg-red-400 rounded-full animate-bounce"
                     style={{ animationDelay: `${i * 150}ms` }} />
                 ))}
               </div>
+              <span className="text-xs text-gray-500 ml-1">Working ({workingSec}s)</span>
             </div>
           </div>
         )}
@@ -304,7 +382,7 @@ function ChatPage() {
       {/* Input */}
       <div className="border-t border-gray-800 p-4">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-gray-500">Thinking:</span>
+          <span className="text-xs text-gray-500">Thinking budget:</span>
           {(['none', 'low', 'medium', 'high'] as ThinkingLevel[]).map(level => (
             <button key={level} onClick={() => setThinking(level)}
               className={`text-xs px-2 py-1 rounded transition-all ${
@@ -321,7 +399,7 @@ function ChatPage() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
             rows={1}
-            placeholder="Message HyperClaw..."
+            placeholder="Your AI assistant awaits — type a message and press Enter to send · HyperClaw"
             className="flex-1 resize-none bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-700 transition-colors"
             style={{ minHeight: '48px', maxHeight: '120px' }}
             onInput={e => {
@@ -336,6 +414,9 @@ function ChatPage() {
           </button>
         </div>
       </div>
+
+      {/* Terminal panel */}
+      <TerminalPanel />
     </div>
   );
 }
@@ -350,8 +431,31 @@ function DashboardPage() {
 
   return (
     <div className="p-6 space-y-4 overflow-y-auto">
+      {/* Hero / header */}
+      <div className="bg-gradient-to-r from-red-900 via-gray-900 to-gray-900 rounded-2xl border border-red-900/40 p-5 flex items-center justify-between shadow-lg shadow-red-900/20">
+        <div>
+          <div className="text-xs text-red-200 uppercase tracking-wider flex items-center gap-1">
+            <span>🦅</span> HyperClaw Dashboard
+          </div>
+          <div className="mt-1 text-2xl font-bold text-gray-100">
+            {status?.agentName || 'Your gateway agent'}
+          </div>
+          <div className="mt-1 text-xs text-gray-300">
+            {status
+              ? `${isError ? 'Gateway offline' : 'Gateway online'} · Model: ${status.model} · Port ${status.port}`
+              : 'Waiting for gateway status...'}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1 text-xs">
+          <StatusBadge online={!!status && !isError} />
+          {status?.uptime && (
+            <div className="text-gray-300 font-mono">Uptime: {status.uptime}</div>
+          )}
+        </div>
+      </div>
+
       <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
-        <span>📊</span> Dashboard
+        <span>📊</span> Overview
       </h2>
 
       <div className="grid grid-cols-3 gap-3">
@@ -446,6 +550,130 @@ function PlaceholderPage({ title, icon, desc, cmd }: { title: string; icon: stri
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Terminal panel (local commands) ─────────────────────────────────────────
+
+function TerminalPanel() {
+  const [open, setOpen] = useState(false);
+  const [command, setCommand] = useState('');
+  const [lines, setLines] = useState<string[]>([]);
+  const [running, setRunning] = useState(false);
+  const [promptInfo, setPromptInfo] = useState<string>('local shell');
+  const logRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
+  }, [lines.length]);
+
+  const runCommand = useCallback(async (cmdToRun: string) => {
+    const cmd = cmdToRun.trim();
+    if (!cmd || running) return;
+    setCommand('');
+    setLines(prev => [...prev, `$ ${cmd}`]);
+    setRunning(true);
+    try {
+      const res = await api.post<TerminalResult>('/api/terminal', { command: cmd });
+      const data = res.data;
+      if (data.user || data.cwd) {
+        const host = data.hostname || 'local';
+        setPromptInfo(`${data.user ?? 'user'}@${host} · ${data.cwd ?? ''}`);
+      }
+      if (data.stdout) {
+        setLines(prev => [...prev, data.stdout.trimEnd()]);
+      }
+      if (data.stderr) {
+        setLines(prev => [...prev, `! ${data.stderr.trimEnd()}`]);
+      }
+      setLines(prev => [...prev, `(exit code ${data.code ?? 0})`]);
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.message || String(e);
+      setLines(prev => [...prev, `Error: ${msg}`]);
+    } finally {
+      setRunning(false);
+    }
+  }, [running]);
+
+  const run = useCallback(() => {
+    const cmd = command.trim();
+    if (cmd) void runCommand(cmd);
+  }, [command, runCommand]);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      run();
+    }
+  };
+
+  const QUICK_COMMANDS = [
+    { label: 'Build', cmd: 'npm run build' },
+    { label: 'Install', cmd: 'npm install' },
+    { label: 'Test', cmd: 'npm test' },
+    { label: 'Doctor', cmd: 'npx hyperclaw doctor --fix' },
+    { label: 'Gateway status', cmd: 'npx hyperclaw gateway status' },
+  ];
+
+  return (
+    <div className="border-t border-gray-900 bg-black/40">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-400 hover:bg-gray-900 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-gray-500">›</span>
+          <span>Local terminal</span>
+          <span className="text-gray-600">({promptInfo})</span>
+        </span>
+        <span className="text-gray-500">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 pt-1 text-xs font-mono text-gray-200 space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_COMMANDS.map(({ label, cmd }) => (
+              <button
+                key={label}
+                onClick={() => void runCommand(cmd)}
+                disabled={running}
+                className="px-2.5 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 hover:bg-gray-700 hover:border-gray-600 disabled:opacity-50 transition-colors"
+                title={cmd}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div
+            ref={logRef}
+            className="bg-black/70 border border-gray-800 rounded-lg p-2 h-40 overflow-y-auto whitespace-pre-wrap"
+          >
+            {lines.length === 0 ? (
+              <span className="text-gray-500">
+                No commands yet. Use the buttons above or type a command below.
+              </span>
+            ) : (
+              lines.map((l, i) => <div key={i}>{l}</div>)
+            )}
+          </div>
+          <div className="flex gap-2 items-center">
+            <input
+              value={command}
+              onChange={e => setCommand(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Run a command in your HyperClaw workspace..."
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-700"
+            />
+            <button
+              onClick={() => void run()}
+              disabled={!command.trim() || running}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white"
+            >
+              Run
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

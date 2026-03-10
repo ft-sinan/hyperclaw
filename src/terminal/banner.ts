@@ -12,7 +12,7 @@ export class Banner {
     const icon = daemonMode ? '🩸' : '🦅';
     try {
       const title = figlet.textSync('HYPERCLAW', { font: 'ANSI Shadow' });
-      const g = (gradient as any)(t.gradient);
+      const g = (gradient as any)(daemonMode ? t.daemonGradient : t.gradient);
       const lines = title.split('\n');
       const first = lines[0] ?? '';
       console.log(`\n  ${icon} ` + g(first));
@@ -23,7 +23,7 @@ export class Banner {
 
     const subtitle = daemonMode
       ? chalk.hex(t.daemonPrimary)('    🩸 DAEMON MODE - ALWAYS WATCHING 🩸\n')
-      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.2.7 🦅\n');
+      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.2.8 🦅\n');
 
     console.log(subtitle);
 
@@ -75,7 +75,7 @@ export class Banner {
     } catch {
       console.log(t.bold('\n  🦅 HYPERCLAW\n'));
     }
-    console.log(t.muted('    🦅 HyperClaw Bot - AI Gateway - SETUP WIZARD v5.2.7 🦅\n'));
+    console.log(t.muted('    🦅 HyperClaw Bot - AI Gateway - SETUP WIZARD v5.2.8 🦅\n'));
 
     const boxOpts: any = {
       padding: 1,

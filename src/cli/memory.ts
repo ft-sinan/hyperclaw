@@ -65,6 +65,10 @@ ${rules}
 - SOUL.md: persona and values (read-only by subagents)
 - AGENTS.md: operational rules (this file)
 - MEMORY.md: accumulated facts about the user
+
+## User prompt & skill integration
+- When the user provides a prompt, system instruction, or persona text in chat: integrate it into SOUL.md using create_memory_file (filename: SOUL.md).
+- When the user provides a skill definition or asks to add a skill: use the skill install tools (install from clawhub, paste content, or write_skill).
 `);
     }
 
