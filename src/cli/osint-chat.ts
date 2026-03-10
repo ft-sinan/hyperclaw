@@ -45,69 +45,6 @@ interface OsintProfile {
   systemPromptOverride?: string;
 }
 
-function printOsintHeader(profile: OsintProfile, model: string, sessionId: string, daemonMode: boolean): void {
-  const modeColors: Record<string, chalk.Chalk> = {
-    recon:      chalk.cyan,
-    bugbounty:  chalk.yellow,
-    pentest:    chalk.hex('#cc0000'),
-    footprint:  chalk.magenta,
-    custom:     chalk.white,
-  };
-  const modeColor = modeColors[profile.mode] ?? chalk.white;
-
-  const blood  = chalk.hex('#cc0000').bold;
-  const darkRed = chalk.hex('#8B0000').bold;
-
-  console.log();
-
-  if (daemonMode) {
-    // ── Blood-red daemon banner ────────────────────────────────────────────
-    console.log(blood('  ██████╗  ██╗      ██████╗  ██████╗ ██████╗ '));
-    console.log(blood('  ██╔══██╗ ██║     ██╔═══██╗██╔═══██╗██╔══██╗'));
-    console.log(blood('  ██████╔╝ ██║     ██║   ██║██║   ██║██║  ██║'));
-    console.log(blood('  ██╔══██╗ ██║     ██║   ██║██║   ██║██║  ██║'));
-    console.log(darkRed('  ██████╔╝ ███████╗╚██████╔╝╚██████╔╝██████╔╝'));
-    console.log(darkRed('  ╚═════╝  ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ '));
-    console.log();
-    console.log(blood('  🩸 HYPERCLAW OSINT  ·  DAEMON MODE'));
-    console.log(chalk.hex('#8B0000')('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-    console.log(blood(`  Workflow: `) + modeColor(profile.mode.toUpperCase()));
-    if (profile.target) {
-      console.log(blood(`  🎯 Target: `) + chalk.white.bold(profile.target) + chalk.hex('#8B0000')(` (${profile.targetType ?? 'custom'})`));
-    }
-    if (profile.notes) {
-      console.log(chalk.hex('#8B0000')(`  📝 Notes: ${profile.notes}`));
-    }
-    console.log(blood(`  🩸 Daemon: `) + chalk.green.bold('connected') + chalk.gray(' — full shell/tool access'));
-    console.log(chalk.hex('#8B0000')(`  🔧 nmap · curl · dig · whois · msfconsole · dirb · nikto · sqlmap`));
-    console.log(chalk.hex('#8B0000')(`  Model: ${model}  ·  Session: ${sessionId}`));
-    console.log(chalk.hex('#8B0000')('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-    console.log(blood('  ⚠️  Authorized security research only. Stay within scope.'));
-    console.log(chalk.hex('#8B0000')('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-    console.log(chalk.hex('#8B0000')('  Commands: /exit  /clear  /findings  /target <value>  /mode  /help'));
-    console.log(chalk.hex('#8B0000')('  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
-  } else {
-    // ── Standard OSINT banner ──────────────────────────────────────────────
-    console.log(RED_DIV);
-    console.log(chalk.red.bold('  🔍 HYPERCLAW OSINT MODE'));
-    console.log(chalk.gray(`  Workflow: `) + modeColor.bold(profile.mode.toUpperCase()));
-    if (profile.target) {
-      console.log(chalk.gray(`  🎯 Target: `) + chalk.white.bold(profile.target) + chalk.gray(` (${profile.targetType ?? 'custom'})`));
-    }
-    if (profile.notes) {
-      console.log(chalk.gray(`  📝 Notes: ${profile.notes}`));
-    }
-    console.log(chalk.gray(`  ⚡ Mode: standalone — start daemon for full shell access`));
-    console.log(chalk.gray(`  Model: ${model}  ·  Session: ${sessionId}`));
-    console.log(RED_DIV);
-    console.log(chalk.yellow('  ⚠️  Authorized security research only. Stay within scope.'));
-    console.log(RED_DIV);
-    console.log(chalk.gray('  Commands: /exit  /clear  /findings  /target <value>  /mode  /help'));
-    console.log(RED_DIV);
-  }
-
-  console.log();
-}
 
 function printOsintHelp(profile: OsintProfile): void {
   console.log();
@@ -375,7 +312,8 @@ async function runOsintChatDaemon(params: {
     await fs.writeFile(osintActivePath, parts.join('\n'), 'utf8').catch(() => {});
   }
 
-  printOsintHeader(profile, rawModel, sessionKey, true);
+  const { Banner } = await import('../terminal/banner');
+  await new Banner().showOsintBanner(true, profile, rawModel, sessionKey);
 
   // Set up readline
   if (process.stdin.isTTY) process.stdin.resume();
@@ -650,7 +588,8 @@ async function runOsintChatStandalone(params: {
   const sessionId = opts.sessionId ?? makeSessionId();
   const messages: InferenceMessage[] = [];
 
-  printOsintHeader(profile, rawModel, sessionId, false);
+  const { Banner } = await import('../terminal/banner');
+  await new Banner().showOsintBanner(false, profile, rawModel, sessionId);
   console.log(chalk.gray('  💡 Tip: start the daemon for full shell/tool access:'));
   console.log(chalk.gray('     hyperclaw daemon start\n'));
 

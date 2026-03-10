@@ -16,6 +16,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.2.9] — 2026-03-11
+
+### Fixed
+- **Chat version display** — Update check now reads correct installed version (no longer shows 0.0.0); prompt only appears when a newer version exists on npm
+
+---
+
 ## [5.2.8] — 2026-03-10
 
 ### Added

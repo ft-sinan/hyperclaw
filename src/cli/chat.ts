@@ -96,16 +96,25 @@ async function printSkills(): Promise<void> {
 async function interactiveChatUpdateCheck(): Promise<void> {
   try {
     const { checkForUpdates } = await import('../infra/update-check');
-    const pkgPath = path.join(__dirname, '../../package.json');
-    const pkg = await fs.readJson(pkgPath).catch(() => null);
-    const current = pkg?.version ?? '0.0.0';
+    let current = '0.0.0';
+    try {
+      const pkgPath = require.resolve('hyperclaw/package.json');
+      const pkg = await fs.readJson(pkgPath).catch(() => null);
+      current = pkg?.version ?? '0.0.0';
+    } catch {
+      const pkgPath = path.join(__dirname, '../../package.json');
+      const pkg = await fs.readJson(pkgPath).catch(() => null);
+      current = pkg?.version ?? '0.0.0';
+    }
 
     const result = await checkForUpdates(current);
     if (!result?.available) return;
 
     console.log();
     console.log(chalk.yellow(`  🦅 New version available! `) + chalk.bold.white(result.latest) + chalk.gray(`  (you have ${current})`));
-    console.log(chalk.gray(`  📦 npm install -g hyperclaw@latest`));
+    const isWindows = process.platform === 'win32';
+    const updateCmd = isWindows ? 'npm install -g hyperclaw@latest' : 'sudo npm install -g hyperclaw@latest';
+    console.log(chalk.gray(`  📦 ${updateCmd}`));
     console.log();
 
     const inquirer = (await import('inquirer')).default;
@@ -121,13 +130,17 @@ async function interactiveChatUpdateCheck(): Promise<void> {
     }]);
 
     if (choice === 'skip') {
-      console.log(chalk.gray(`\n  ⏭️  Skipping — run: npm install -g hyperclaw@latest when ready.\n`));
+      console.log(chalk.gray(`\n  ⏭️  Skipping — run: ${updateCmd} when ready.\n`));
       return;
     }
 
     console.log(chalk.cyan('\n  ⏳ Updating HyperClaw...\n'));
+    const updateArgs = isWindows
+      ? ['install', '-g', 'hyperclaw@latest']
+      : ['npm', 'install', '-g', 'hyperclaw@latest'];
+    const updateBin = isWindows ? 'npm' : 'sudo';
     await new Promise<void>((resolve) => {
-      const proc = spawn('npm', ['install', '-g', 'hyperclaw@latest'], {
+      const proc = spawn(updateBin, updateArgs, {
         stdio: 'inherit',
         shell: true,
       });
@@ -136,6 +149,9 @@ async function interactiveChatUpdateCheck(): Promise<void> {
           console.log(chalk.green(`\n  ✅ Updated to ${result.latest} — starting chat...\n`));
         } else {
           console.log(chalk.red(`\n  ❌ Update failed (exit ${code}). Starting chat anyway...\n`));
+          if (!isWindows) {
+            console.log(chalk.gray('  💡 If you use nvm/fnm, try without sudo: npm install -g hyperclaw@latest\n'));
+          }
         }
         resolve();
       });

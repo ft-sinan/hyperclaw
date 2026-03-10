@@ -16,7 +16,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.2.8';
+const APP_VERSION = '5.2.9';
 
 // ─── Query client ─────────────────────────────────────────────────────────────
 
