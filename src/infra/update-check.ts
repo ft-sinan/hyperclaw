@@ -11,6 +11,26 @@ import https from 'https';
 const NPM_REGISTRY = 'https://registry.npmjs.org';
 const PACKAGE_NAME = 'hyperclaw';
 
+/** Resolve current package version from package.json (works from repo and global install). */
+export async function getCurrentVersion(): Promise<string> {
+  const candidates: string[] = [];
+  try {
+    candidates.push(require.resolve('hyperclaw/package.json'));
+  } catch {
+    // Not in node_modules (e.g. running from repo)
+  }
+  candidates.push(path.resolve(__dirname, '../../package.json'));
+  candidates.push(path.resolve(process.cwd(), 'package.json'));
+  for (const pkgPath of candidates) {
+    try {
+      const pkg = await fs.readJson(pkgPath).catch(() => null);
+      const v = pkg?.version;
+      if (typeof v === 'string' && /^\d+\.\d+\.\d+/.test(v)) return v;
+    } catch {}
+  }
+  return '0.0.0';
+}
+
 function parseVersion(v: string): number[] {
   const match = v.replace(/^v/, '').match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) return [0, 0, 0];
@@ -70,9 +90,7 @@ export function maybeShowUpdateNotice(skipInDaemon = false): void {
   if (skipInDaemon) return;
   (async () => {
     try {
-      const pkgPath = path.join(__dirname, '../package.json');
-      const pkg = await fs.readJson(pkgPath).catch(() => null);
-      const current = pkg?.version ?? '0.0.0';
+      const current = await getCurrentVersion();
       const result = await checkForUpdates(current);
       if (result?.available) notifyUpdateAvailable(current, result.latest);
     } catch {}

@@ -2,7 +2,7 @@
 set -e
 
 echo ""
-echo "⚡ HyperClaw v5.3.0 — AI Gateway Platform"
+echo "⚡ HyperClaw v5.3.1 — AI Gateway Platform"
 echo "The Lobster Evolution 🦅"
 echo "==========================================="
 echo ""

@@ -95,17 +95,8 @@ async function printSkills(): Promise<void> {
 
 async function interactiveChatUpdateCheck(): Promise<void> {
   try {
-    const { checkForUpdates } = await import('../infra/update-check');
-    let current = '0.0.0';
-    try {
-      const pkgPath = require.resolve('hyperclaw/package.json');
-      const pkg = await fs.readJson(pkgPath).catch(() => null);
-      current = pkg?.version ?? '0.0.0';
-    } catch {
-      const pkgPath = path.join(__dirname, '../../package.json');
-      const pkg = await fs.readJson(pkgPath).catch(() => null);
-      current = pkg?.version ?? '0.0.0';
-    }
+    const { checkForUpdates, getCurrentVersion } = await import('../infra/update-check');
+    const current = await getCurrentVersion();
 
     const result = await checkForUpdates(current);
     if (!result?.available) return;
@@ -299,17 +290,36 @@ export async function runChat(opts: {
   rl.on('close', resolve);
 
   const BOX_W = 60;
+  const INNER_W = BOX_W - 6; // width between "  │ " and " │"
   const TOP = t.a('  ╭' + '─'.repeat(BOX_W) + '╮');
   const BOT = t.a('  ╰' + '─'.repeat(BOX_W) + '╯');
   const PLACEHOLDER_TEXT = 'Say something to HyperClaw, press Enter';
-  const PLACEHOLDER_LINE = t.a('  │ ') + t.muted(PLACEHOLDER_TEXT) + ' '.repeat(Math.max(0, BOX_W - 4 - PLACEHOLDER_TEXT.length)) + t.a(' │');
+  const PAD = Math.max(0, INNER_W - 2 - PLACEHOLDER_TEXT.length); // "❯ " = 2
+  const MIDDLE_LINE = t.a('  │ ') + t.bold('❯ ') + t.muted(PLACEHOLDER_TEXT) + ' '.repeat(PAD) + t.a(' │');
   const INPUT_PROMPT = t.a('  │ ') + t.bold('❯ ');
 
   const prompt = () => {
     process.stdout.write('\n' + TOP + '\n');
-    process.stdout.write(PLACEHOLDER_LINE + '\n');
-    rl.question(INPUT_PROMPT, (input) => {
-      process.stdout.write(BOT + '\n');
+    process.stdout.write(MIDDLE_LINE + '\n');
+    process.stdout.write(BOT + '\n');
+    process.stdout.write('\x1b[1A\x1b[1A'); // cursor up 2 lines (to middle line)
+    process.stdout.write('\x1b[6C');        // cursor forward 6 (after "  │ ❯ ")
+    let placeholderCleared = false;
+    const rlInput = (rl as any).input as NodeJS.ReadableStream | undefined;
+    const clearPlaceholder = (chunk?: Buffer | string) => {
+      if (placeholderCleared) return;
+      placeholderCleared = true;
+      process.stdout.write('\x1b[K'); // clear from cursor to end of line
+      if (rlInput) rlInput.removeListener('data', onData);
+      if (chunk !== undefined && rlInput && typeof (rlInput as any).unshift === 'function') (rlInput as any).unshift(chunk);
+    };
+    const onData = (chunk: Buffer | string) => {
+      clearPlaceholder(chunk);
+    };
+    if (rlInput) rlInput.once('data', onData);
+    rl.question('', (input) => {
+      if (rlInput) rlInput.removeListener('data', onData);
+      process.stdout.write('\n');
       // stdin EOF (null) — keep prompting instead of exiting
       if (input === null || input === undefined) { prompt(); return; }
       void (async () => {

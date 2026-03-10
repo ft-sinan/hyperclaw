@@ -16,6 +16,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.3.1] — 2026-03-13
+
+### Fixed
+- **Version display** — `getCurrentVersion()` in update-check tries multiple paths so "(you have X.Y.Z)" shows the real installed version instead of 0.0.0
+- **Chat input box** — Complete box (top/middle/bottom), placeholder on middle line, clears on first keypress
+
+---
+
 ## [5.3.0] — 2026-03-12
 
 ### Added
