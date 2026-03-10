@@ -16,6 +16,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.3.0] — 2026-03-12
+
+### Added
+- **Chat input box** — Styled box with borders and placeholder "Say something to HyperClaw, press Enter"
+- **Chat theme by daemon** — Input box borders and ❯ prompt: cyan in normal mode, red when daemon/gateway is running; `hyperclaw chat --daemon` to force red theme
+
+---
+
 ## [5.2.9] — 2026-03-11
 
 ### Fixed

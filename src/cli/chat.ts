@@ -110,10 +110,11 @@ async function interactiveChatUpdateCheck(): Promise<void> {
     const result = await checkForUpdates(current);
     if (!result?.available) return;
 
-    console.log();
-    console.log(chalk.yellow(`  🦅 New version available! `) + chalk.bold.white(result.latest) + chalk.gray(`  (you have ${current})`));
     const isWindows = process.platform === 'win32';
     const updateCmd = isWindows ? 'npm install -g hyperclaw@latest' : 'sudo npm install -g hyperclaw@latest';
+
+    console.log();
+    console.log(chalk.yellow(`  🦅 New version available! `) + chalk.bold.white(result.latest) + chalk.gray(`  (you have ${current})`));
     console.log(chalk.gray(`  📦 ${updateCmd}`));
     console.log();
 
@@ -123,37 +124,50 @@ async function interactiveChatUpdateCheck(): Promise<void> {
       name: 'choice',
       message: chalk.cyan('What would you like to do?'),
       choices: [
-        { name: `🚀  Update now   ${chalk.gray('(recommended)')}`, value: 'update' },
-        { name: `⏭️   Skip for later`, value: 'skip' },
+        { name: `🚀  Update now & restart chat   ${chalk.gray('(recommended)')}`, value: 'update' },
+        { name: `⏭️   Skip — continue to chat`, value: 'skip' },
       ],
       prefix: '  ✨',
     }]);
 
+    // Clear any leftover inquirer output before continuing
+    process.stdout.write('\n');
+
     if (choice === 'skip') {
-      console.log(chalk.gray(`\n  ⏭️  Skipping — run: ${updateCmd} when ready.\n`));
+      console.log(chalk.gray(`  ⏭️  Skipping — run: ${updateCmd} when ready.\n`));
       return;
     }
 
-    console.log(chalk.cyan('\n  ⏳ Updating HyperClaw...\n'));
+    console.log(chalk.cyan('  ⏳ Updating HyperClaw...\n'));
     const updateArgs = isWindows
       ? ['install', '-g', 'hyperclaw@latest']
       : ['npm', 'install', '-g', 'hyperclaw@latest'];
     const updateBin = isWindows ? 'npm' : 'sudo';
+
     await new Promise<void>((resolve) => {
-      const proc = spawn(updateBin, updateArgs, {
-        stdio: 'inherit',
-        shell: true,
-      });
+      const proc = spawn(updateBin, updateArgs, { stdio: 'inherit', shell: true });
       proc.on('close', (code) => {
         if (code === 0) {
-          console.log(chalk.green(`\n  ✅ Updated to ${result.latest} — starting chat...\n`));
+          console.log(chalk.green(`\n  ✅ Updated to ${result.latest}! Restarting chat...\n`));
+          // Re-exec with the new binary — original args preserved
+          const newProc = spawn(process.argv[0]!, process.argv.slice(1), {
+            stdio: 'inherit',
+            shell: false,
+            detached: false,
+          });
+          newProc.on('close', (c) => process.exit(c ?? 0));
+          newProc.on('error', () => {
+            console.log(chalk.yellow('  ⚠️  Could not auto-restart. Run: hyperclaw chat\n'));
+            process.exit(0);
+          });
+          // Don't resolve — let new process take over
         } else {
-          console.log(chalk.red(`\n  ❌ Update failed (exit ${code}). Starting chat anyway...\n`));
+          console.log(chalk.red(`\n  ❌ Update failed (exit ${code}). Continuing with current version...\n`));
           if (!isWindows) {
             console.log(chalk.gray('  💡 If you use nvm/fnm, try without sudo: npm install -g hyperclaw@latest\n'));
           }
+          resolve();
         }
-        resolve();
       });
       proc.on('error', () => resolve());
     });
@@ -172,6 +186,7 @@ export async function runChat(opts: {
   model?: string;
   thinking?: 'high' | 'medium' | 'low' | 'none';
   workspace?: string;
+  daemonMode?: boolean;
 }): Promise<void> {
   // Load config
   const cfg = await fs.readJson(getConfigPath()).catch(() => null);
@@ -259,6 +274,9 @@ export async function runChat(opts: {
   // Interactive update check — prompt user before entering chat
   await interactiveChatUpdateCheck();
 
+  // Flush stdout after inquirer to prevent duplicate prompts (inquirer leaves terminal dirty)
+  process.stdout.write('\x1B[0m');
+
   // Set up readline — ensure stdin stays in flowing mode (fixes early close on Windows/some terminals)
   if (process.stdin.isTTY) process.stdin.resume();
   const rl = readline.createInterface({
@@ -274,12 +292,24 @@ export async function runChat(opts: {
     process.exit(0);
   });
 
+  const daemonMode = opts.daemonMode ?? false;
+  const t = (await import('../infra/theme')).getTheme(daemonMode);
+
   await new Promise<void>((resolve) => {
   rl.on('close', resolve);
 
-  const INPUT_PROMPT = chalk.gray('  Message HyperClaw — type and press Enter to send › ');
+  const BOX_W = 60;
+  const TOP = t.a('  ╭' + '─'.repeat(BOX_W) + '╮');
+  const BOT = t.a('  ╰' + '─'.repeat(BOX_W) + '╯');
+  const PLACEHOLDER_TEXT = 'Say something to HyperClaw, press Enter';
+  const PLACEHOLDER_LINE = t.a('  │ ') + t.muted(PLACEHOLDER_TEXT) + ' '.repeat(Math.max(0, BOX_W - 4 - PLACEHOLDER_TEXT.length)) + t.a(' │');
+  const INPUT_PROMPT = t.a('  │ ') + t.bold('❯ ');
+
   const prompt = () => {
+    process.stdout.write('\n' + TOP + '\n');
+    process.stdout.write(PLACEHOLDER_LINE + '\n');
     rl.question(INPUT_PROMPT, (input) => {
+      process.stdout.write(BOT + '\n');
       // stdin EOF (null) — keep prompting instead of exiting
       if (input === null || input === undefined) { prompt(); return; }
       void (async () => {
