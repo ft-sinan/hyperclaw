@@ -99,6 +99,22 @@
     .welcome-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px; }
     .chip { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 7px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .2s; }
     .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── LOCAL TERMINAL ─── */
+    .terminal-wrap { border-top: 1px solid var(--border); background: rgba(0,0,0,0.4); flex-shrink: 0; }
+    .terminal-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; font-size: 12px; color: var(--text2); background: transparent; border: none; cursor: pointer; transition: background .2s; }
+    .terminal-toggle:hover { background: var(--bg3); }
+    .terminal-body { padding: 12px 16px; display: none; }
+    .terminal-body.open { display: block; }
+    .terminal-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .terminal-btn { padding: 6px 12px; font-size: 11px; border-radius: 6px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); cursor: pointer; transition: all .2s; }
+    .terminal-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .terminal-btn:disabled { opacity: 0.5; cursor: default; }
+    .terminal-log { background: rgba(0,0,0,0.7); border: 1px solid var(--border); border-radius: 8px; padding: 10px; height: 140px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); white-space: pre-wrap; margin-bottom: 10px; }
+    .terminal-log:empty::before { content: 'No commands yet. Use the buttons above or type a command below.'; color: var(--text2); opacity: 0.7; }
+    .terminal-input-row { display: flex; gap: 8px; align-items: center; }
+    .terminal-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text); outline: none; }
+    .terminal-input:focus { border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -115,9 +131,16 @@
     <span class="dot" id="ws-dot"></span>
     <span id="ws-label" style="color:var(--text2);font-size:13px">Offline</span>
   </div>
-  <div class="banner-actions">
+  <div class="banner-actions" style="display:flex;align-items:center;gap:8px">
+    <select id="prompt-select" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">
+      <option value="">General</option>
+      <option value="ethical-hacker">Ethical Hacker</option>
+      <option value="hyperclaw">HyperClaw Dev</option>
+      <option value="osint">OSINT</option>
+    </select>
+    <button class="btn-icon" id="new-chat-btn" title="New chat">💬</button>
+    <button class="btn-icon" id="clear-btn" title="Clear messages">🗑️</button>
     <button class="btn-icon" id="theme-btn" title="Toggle theme">🌙</button>
-    <button class="btn-icon" id="clear-btn" title="Clear chat">🗑️</button>
   </div>
 </header>
 
@@ -145,6 +168,28 @@
   <div class="input-hint">🦅 HyperClaw · <span id="model-hint">—</span></div>
 </div>
 
+<!-- LOCAL TERMINAL -->
+<div class="terminal-wrap">
+  <button type="button" class="terminal-toggle" id="terminal-toggle">
+    <span>› Local terminal</span>
+    <span id="terminal-toggle-label">Show</span>
+  </button>
+  <div class="terminal-body" id="terminal-body">
+    <div class="terminal-btns">
+      <button type="button" class="terminal-btn" data-cmd="npm run build">Build</button>
+      <button type="button" class="terminal-btn" data-cmd="npm install">Install</button>
+      <button type="button" class="terminal-btn" data-cmd="npm test">Test</button>
+      <button type="button" class="terminal-btn" data-cmd="npx hyperclaw doctor --fix">Doctor</button>
+      <button type="button" class="terminal-btn" data-cmd="npx hyperclaw gateway status">Gateway status</button>
+    </div>
+    <div class="terminal-log" id="terminal-log"></div>
+    <div class="terminal-input-row">
+      <input type="text" class="terminal-input" id="terminal-input" placeholder="Run a command in your HyperClaw workspace..." />
+      <button type="button" class="terminal-btn" id="terminal-run">Run</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const port = location.port || 18789;
   const wsUrl = `ws://${location.hostname}:${port}`;
@@ -170,7 +215,17 @@
     themeBtn.textContent = dark ? '🌙' : '☀️';
   };
 
-  // ── Clear ────────────────────────────────────────────
+  // ── New chat / Clear ─────────────────────────────────
+  const promptSelect = document.getElementById('prompt-select');
+  const PROMPT_PREFIX = {
+    'ethical-hacker': 'Act as an ethical hacker / security researcher. Authorized testing only. ',
+    'hyperclaw': 'You are helping with HyperClaw development. Be concise and code-focused. ',
+    'osint': 'Act as an OSINT analyst. Passive reconnaissance, open-source research. '
+  };
+  document.getElementById('new-chat-btn').onclick = () => {
+    messagesEl.querySelectorAll('.msg-row').forEach(e => e.remove());
+    welcomeEl.style.display = 'flex';
+  };
   document.getElementById('clear-btn').onclick = () => {
     messagesEl.querySelectorAll('.msg-row').forEach(e => e.remove());
     welcomeEl.style.display = 'flex';
@@ -297,6 +352,9 @@
     e.preventDefault();
     const msg = input.value.trim();
     if (!msg || isStreaming) return;
+    const preset = promptSelect?.value || '';
+    const prefix = PROMPT_PREFIX[preset] || '';
+    const fullMsg = prefix ? prefix + msg : msg;
     addMsg('user', msg);
     input.value = '';
     input.style.height = 'auto';
@@ -305,13 +363,13 @@
     addTyping();
 
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'chat:message', content: msg, source: 'webchat' }));
+      ws.send(JSON.stringify({ type: 'chat:message', content: fullMsg, source: 'webchat' }));
     } else {
       // REST fallback
       try {
         const res = await fetch(apiUrl + '/api/chat', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({message: msg})
+          body: JSON.stringify({message: fullMsg})
         });
         const data = await res.json();
         removeTyping();
@@ -334,6 +392,55 @@
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.dispatchEvent(new Event('submit')); }
   });
+
+  // ── Local Terminal ───────────────────────────────────
+  const terminalToggle = document.getElementById('terminal-toggle');
+  const terminalBody = document.getElementById('terminal-body');
+  const terminalLog = document.getElementById('terminal-log');
+  const terminalInput = document.getElementById('terminal-input');
+  const terminalRun = document.getElementById('terminal-run');
+  const toggleLabel = document.getElementById('terminal-toggle-label');
+  let terminalRunning = false;
+
+  terminalToggle.onclick = () => {
+    terminalBody.classList.toggle('open', !terminalBody.classList.contains('open'));
+    toggleLabel.textContent = terminalBody.classList.contains('open') ? 'Hide' : 'Show';
+  };
+
+  async function runTerminalCmd(cmd) {
+    cmd = (cmd || '').trim();
+    if (!cmd || terminalRunning) return;
+    terminalLog.append('$ ' + cmd + '\n');
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+    terminalRunning = true;
+    terminalRun.disabled = true;
+    document.querySelectorAll('.terminal-btn[data-cmd]').forEach(b => b.disabled = true);
+    try {
+      const res = await fetch(apiUrl + '/api/terminal', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({command: cmd})
+      });
+      const data = await res.json();
+      if (data.stdout) terminalLog.append(data.stdout.trimEnd() + '\n');
+      if (data.stderr) terminalLog.append('! ' + data.stderr.trimEnd() + '\n');
+      terminalLog.append('(exit code ' + (data.code ?? 0) + ')\n');
+    } catch (e) {
+      terminalLog.append('Error: ' + (e.message || String(e)) + '\n');
+    } finally {
+      terminalRunning = false;
+      terminalRun.disabled = false;
+      document.querySelectorAll('.terminal-btn[data-cmd]').forEach(b => b.disabled = false);
+      terminalLog.scrollTop = terminalLog.scrollHeight;
+    }
+  }
+
+  document.querySelectorAll('.terminal-btn[data-cmd]').forEach(btn => {
+    btn.onclick = () => runTerminalCmd(btn.dataset.cmd);
+  });
+  terminalRun.onclick = () => { runTerminalCmd(terminalInput.value); terminalInput.value = ''; };
+  terminalInput.onkeydown = (e) => {
+    if (e.key === 'Enter') { runTerminalCmd(terminalInput.value); terminalInput.value = ''; }
+  };
 
   // ── Init ─────────────────────────────────────────────
   connectWs();

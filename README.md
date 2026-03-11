@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="docs/README.md">📚 Docs</a> ·
+  <a href="READMECOMMAND.md">📜 Commands Reference</a> ·
   <a href="docs/architecture.md">🏗 Architecture</a> ·
   <a href="docs/configuration.md">⚙️ Config</a> ·
   <a href="docs/security.md">🔒 Security</a> ·
@@ -1013,6 +1014,7 @@ hyperclaw/
 
 | Topic | File |
 |-------|------|
+| **Commands reference** | [READMECOMMAND.md](READMECOMMAND.md) |
 | **Getting started** | [docs/README.md](docs/README.md) |
 | Architecture overview | [docs/architecture.md](docs/architecture.md) |
 | Configuration reference | [docs/configuration.md](docs/configuration.md) |

@@ -43,6 +43,7 @@ All HyperClaw CLI commands with explanations of what they do.
 
 | Command | Description |
 |---------|-------------|
+| `hyperclaw web` | Launch React Web UI — auto `npm install` + `npm run dev`. Options: `--skip-install`, `--port <port>`. |
 | `hyperclaw chat` | Interactive terminal chat with the agent. Options: `--session`, `--model`, `--thinking`, `--workspace`. In-chat commands: `/exit`, `/clear`, `/model`, `/skills`, `/help`. |
 | `hyperclaw agent -m "message"` | Sends a one-off message to the agent (non-streaming). Options: `--thinking`, `--model`, `--session`, `--multi-step`, `--parallel`, `--verbose`. |
 
@@ -257,7 +258,25 @@ All HyperClaw CLI commands with explanations of what they do.
 
 ---
 
-## Web UI & Terminal API (v5.3.1+)
+## React Web UI (optional)
+
+Recommended: `hyperclaw web` — auto-installs deps and starts the dev server.
+
+Or manually:
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Then open `http://localhost:5173` (Vite dev server). Point it at your gateway with `VITE_GATEWAY_URL=http://localhost:18789` if the gateway runs elsewhere.
+
+The gateway’s built-in chat at `http://localhost:18789/chat` uses the static HTML UI. The React app offers more features.
+
+---
+
+## Web UI & Terminal API (v5.3.2+)
 
 - **Web UI**: After `hyperclaw gateway` or `hyperclaw daemon start`, open `http://localhost:18789` (or your gateway port). Dashboard, Chat with New chat / Clear messages, and **Local terminal** panel below the chat — with Build, Install, Test, Doctor buttons.
 - **Terminal API**: `POST /api/terminal` with `{ "command": "npm run build" }` — runs a command in the gateway's cwd.

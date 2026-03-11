@@ -16,7 +16,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.3.1';
+const APP_VERSION = '5.3.2';
 
 // ─── Query client ─────────────────────────────────────────────────────────────
 
@@ -198,7 +198,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (p: Page) => void }) 
       {/* Brand */}
       <div className="px-4 py-4 border-b border-gray-800">
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl">🦅</span>
+          <img src="/icon.png" alt="HyperClaw" className="w-8 h-8 rounded-lg" />
           <div>
             <div className="text-sm font-bold text-red-400 tracking-wide">HyperClaw</div>
             <div className="text-xs text-gray-500">v{APP_VERSION}</div>
@@ -250,10 +250,18 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (p: Page) => void }) 
 
 type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
 
+const PROMPT_PRESETS: Record<string, string> = {
+  '': '',
+  'ethical-hacker': 'Act as an ethical hacker / security researcher. Authorized testing only. ',
+  'hyperclaw': 'You are helping with HyperClaw development. Be concise and code-focused. ',
+  osint: 'Act as an OSINT analyst. Passive reconnaissance, open-source research. '
+};
+
 function ChatPage() {
   const { messages, sendMutation, streaming, resetChat, clearChat } = useChat();
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState<ThinkingLevel>('none');
+  const [promptPreset, setPromptPreset] = useState('');
   const [workingSec, setWorkingSec] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -270,20 +278,36 @@ function ChatPage() {
 
   const send = useCallback(() => {
     if (!input.trim() || sendMutation.isPending) return;
-    sendMutation.mutate({ message: input.trim(), thinking });
+    const raw = input.trim();
+    const prefix = PROMPT_PRESETS[promptPreset] || '';
+    const fullMsg = prefix ? prefix + raw : raw;
+    sendMutation.mutate({ message: fullMsg, thinking });
     setInput('');
-  }, [input, thinking, sendMutation]);
+  }, [input, thinking, promptPreset, sendMutation]);
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="border-b border-gray-800 px-4 py-3 flex items-center justify-between bg-gradient-to-r from-gray-900 via-gray-950 to-gray-900">
-        <div>
+        <div className="flex items-center gap-3">
+          <img src="/icon.png" alt="HyperClaw" className="w-10 h-10 rounded-lg" />
+          <div>
           <div className="text-xs text-gray-500 uppercase tracking-wider">HyperClaw</div>
           <div className="text-sm font-semibold text-gray-100">Web Chat</div>
           <div className="text-xs text-gray-500">Converse with your local gateway agent</div>
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <select
+            value={promptPreset}
+            onChange={e => setPromptPreset(e.target.value)}
+            className="text-xs px-2 py-1.5 rounded-lg border border-gray-700 bg-gray-900 text-gray-200"
+          >
+            <option value="">General</option>
+            <option value="ethical-hacker">Ethical Hacker</option>
+            <option value="hyperclaw">HyperClaw Dev</option>
+            <option value="osint">OSINT</option>
+          </select>
           <button
             onClick={resetChat}
             className="text-xs px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-200 transition-colors"

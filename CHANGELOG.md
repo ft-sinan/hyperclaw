@@ -16,19 +16,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.3.2] — 2026-03-11
+
+### Added
+- 🌐 **`hyperclaw web`** — Launch React Web UI with auto `npm install` + `npm run dev` (no manual setup)
+- ⚡ **Quick actions** — `hyperclaw` (no args) now shows `hyperclaw web` and `hyperclaw chat` prominently
+- 📋 **`--help`** — Full command list including `web` and all subcommands; references READMECOMMAND.md
+- 🎯 **Prompt selector** — Static + React chat: General, Ethical Hacker, HyperClaw Dev, OSINT presets
+- 💬 **New chat / Clear messages** — Buttons in both static and React Web UI
+- 🖼️ **Web UI icon** — Favicon and header logo use `icon.png`
+
+---
+
 ## [5.3.1] — 2026-03-13
 
 ### Fixed
-- **Version display** — `getCurrentVersion()` in update-check tries multiple paths so "(you have X.Y.Z)" shows the real installed version instead of 0.0.0
-- **Chat input box** — Complete box (top/middle/bottom), placeholder on middle line, clears on first keypress
+- 🔢 **Version display** — `getCurrentVersion()` in update-check tries multiple paths so "(you have X.Y.Z)" shows the real installed version instead of 0.0.0
+- 📦 **Chat input box** — Complete box (top/middle/bottom), placeholder on middle line, clears on first keypress
 
 ---
 
 ## [5.3.0] — 2026-03-12
 
 ### Added
-- **Chat input box** — Styled box with borders and placeholder "Say something to HyperClaw, press Enter"
-- **Chat theme by daemon** — Input box borders and ❯ prompt: cyan in normal mode, red when daemon/gateway is running; `hyperclaw chat --daemon` to force red theme
+- 📦 **Chat input box** — Styled box with borders and placeholder "Say something to HyperClaw, press Enter"
+- 🎨 **Chat theme by daemon** — Input box borders and ❯ prompt: cyan in normal mode, red when daemon/gateway is running; `hyperclaw chat --daemon` to force red theme
 
 ---
 

@@ -77,13 +77,41 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.3.1')
+  .version('5.3.2')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
     'Required for multi-gateway setups (rescue bot, staging, etc.). ' +
     'Example: hyperclaw --profile rescue gateway --port 19001'
   )
+  .addHelpText('after', `
+  Full commands reference: READMECOMMAND.md (all commands and options)
+
+  Main command groups:
+    init, onboard, quickstart, setup
+    gateway status|start|stop|restart, daemon start|stop|restart|status|logs
+    web — React Web UI (auto npm install + dev server)
+    chat — terminal chat
+    agent -m "message"
+    channels list|add|remove|login|status
+    hooks list|enable|disable|info
+    pairing list|approve, devices list|pair|approve|reject|unpair
+    hub, skill search|list|install
+    memory show|add-rule|add-fact|search|clear|save
+    config show|set-key|schema, secrets audit|set|apply|reload
+    doctor [--fix], health, security audit
+    status, dashboard
+    threads list|terminate, canvas show|add|clear|export
+    mcp list|add|remove|probe, node list|add|probe|remove
+    cron list|add|remove, webhooks list|remove|toggle, logs
+    voice, theme list|set|preview, workspace init|show
+    pc status|enable|disable|log|run
+    bot status|setup|start|stop
+    auth add|remove|oauth|setup-token
+    osint [workflow], deploy, update, message send
+
+  Examples: hyperclaw onboard | hyperclaw chat | hyperclaw gateway status
+  Run "hyperclaw" with no args for quick actions, or see READMECOMMAND.md for full list.`)
   .hook('preAction', (thisCommand) => {
     // Apply --profile early so path resolution in all subcommands sees the correct dirs
     const profile = thisCommand.opts().profile as string | undefined;
@@ -630,6 +658,39 @@ program.command('update')
     process.exit(0);
   });
 
+// ─── WEB (React Web UI) ───────────────────────────────────────────────────────
+
+program.command('web')
+  .description('Launch React Web UI — auto npm install and npm run dev')
+  .option('--skip-install', 'Skip npm install (use if deps already installed)')
+  .option('--port <port>', 'Vite dev server port', '5173')
+  .action(async (opts: { skipInstall?: boolean; port?: string }) => {
+    const path = await import('path');
+    const fs = await import('fs-extra');
+    const { spawn } = await import('child_process');
+    const root = path.join(process.cwd(), 'apps', 'web');
+    const altRoot = path.join(__dirname, '..', '..', 'apps', 'web');
+    const webDir = (await fs.pathExists(root)) ? root : (await fs.pathExists(altRoot)) ? altRoot : null;
+    if (!webDir || !(await fs.pathExists(path.join(webDir, 'package.json')))) {
+      console.log(chalk.gray('\n  React Web UI not found. Run from HyperClaw repo root.\n'));
+      process.exit(1);
+    }
+    console.log(chalk.bold.hex('#06b6d4')('\n  🦅 HyperClaw Web UI\n'));
+    if (!opts.skipInstall) {
+      console.log(chalk.gray('  Installing dependencies...\n'));
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn('npm', ['install'], { cwd: webDir, stdio: 'inherit', shell: true });
+        child.on('error', reject);
+        child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('npm install failed'))));
+      });
+    }
+    const port = opts.port || '5173';
+    console.log(chalk.gray(`  Starting dev server at http://localhost:${port}\n`));
+    const child = spawn('npm', ['run', 'dev', '--', '--port', port], { cwd: webDir, stdio: 'inherit', shell: true });
+    child.on('error', () => {});
+    child.on('exit', (code) => process.exit(code ?? 0));
+  });
+
 // ─── DOCTOR ──────────────────────────────────────────────────────────────────
 
 program.command('doctor')
@@ -780,7 +841,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.3.1")',
+      version: 'string (e.g. "5.3.2")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -2071,7 +2132,8 @@ if (process.argv.length === 2) {
       const t = getTheme(false);
       const chalk = require('chalk');
       console.log(t.bold('  Quick actions:\n'));
-      console.log(`  ${t.c('hyperclaw chat')}                      — chat with agent (terminal)`);
+      console.log(`  ${t.c('hyperclaw web')}                        — React Web UI (auto install + start)`);
+      console.log(`  ${t.c('hyperclaw chat')}                       — terminal chat`);
       console.log(`  ${t.c('hyperclaw onboard')}                    — re-run setup wizard`);
       console.log(`  ${t.c('hyperclaw daemon start')}               — start background service`);
       console.log(`  ${t.c('hyperclaw daemon status')}              — service status`);
