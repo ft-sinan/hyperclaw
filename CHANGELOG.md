@@ -16,6 +16,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.3.4] — 2026-03-13
+
+### Fixed
+- **Chat input box rendering** — The `❯` prompt and box shape were not rendering correctly on Windows. Replaced the fragile pre-draw-then-reposition approach (ANSI cursor-up sequences `\x1b[1A` that readline would overwrite) with `rl.question(INPUT_PROMPT, ...)` so readline draws the prompt natively. The bottom border now prints after the user presses Enter. Works correctly in PowerShell, CMD, and Windows Terminal.
+- **Version always showing 0.0.0 in update check** — `getCurrentVersion()` was reading `path.resolve(__dirname, '../../package.json')` which, from the compiled `dist/` directory in a global npm install, resolves two levels above the package root (to `node_modules/package.json`, which does not exist). Added `path.resolve(__dirname, '../package.json')` as the primary candidate so the correct `package.json` at the package root is found. The update notification now only appears when a genuinely newer version is available on npm.
+- **`hyperclaw web` fails from any directory** — Pre-built React UI now ships inside `static/web/` (part of npm `files`). The `web` command first checks for `static/web/index.html` and serves it with a Node built-in HTTP server (API proxy + WebSocket proxy to gateway on port 18789). Falls back to Vite dev server only when the pre-built files are absent (development workflow). `prepublishOnly` now includes `web:build` so the built UI is always fresh on every publish.
+
+---
+
 ## [5.3.3] — 2026-03-12
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "hyperclaw",
-  "version": "5.3.2",
+  "version": "5.3.4",
   "description": "⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅",
   "main": "dist/run-main.js",
   "bin": {
@@ -40,7 +40,7 @@
     "sdk:build": "tsdown src/sdk/index.ts --outDir dist/sdk --format cjs && tsdown src/sdk/index.ts --outDir dist/sdk --format esm",
     "core:build": "tsc --noEmit -p packages/core/tsconfig.json",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build && npm run sdk:build && npm run core:build",
+    "prepublishOnly": "npm run build && npm run web:build && npm run sdk:build && npm run core:build",
     "postinstall": "node scripts/postinstall.js",
     "test": "vitest run",
     "test:watch": "vitest",

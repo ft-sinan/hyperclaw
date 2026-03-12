@@ -19,7 +19,8 @@ export async function getCurrentVersion(): Promise<string> {
   } catch {
     // Not in node_modules (e.g. running from repo)
   }
-  candidates.push(path.resolve(__dirname, '../../package.json'));
+  candidates.push(path.resolve(__dirname, '../package.json'));   // dist/../package.json (global install)
+  candidates.push(path.resolve(__dirname, '../../package.json')); // dist/cli/../../ (dev nested)
   candidates.push(path.resolve(process.cwd(), 'package.json'));
   for (const pkgPath of candidates) {
     try {

@@ -23,7 +23,7 @@ export class Banner {
 
     const subtitle = daemonMode
       ? chalk.hex(t.daemonPrimary)('    🩸 DAEMON MODE - ALWAYS WATCHING 🩸\n')
-      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.3.2 🦅\n');
+      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.3.4 🦅\n');
 
     console.log(subtitle);
 
@@ -46,7 +46,7 @@ export class Banner {
     const providerCount = cfg?.providers?.length ?? (cfg?.provider ? 1 : 0);
 
     const box = boxen(
-      `${t.a('●')} Gateway: ${running ? t.success('Running') : t.error('Stopped')}  ` +
+      `${t.a('●')} Gateway: ${running ? t.success('✓ Running') : t.error('✗ Stopped')}  ` +
       `${t.a('●')} Providers: ${providerCount}  ` +
       `${t.a('●')} Channels: ${chCount}  ` +
       (daemonMode ? `${t.d('🩸')} DAEMON` : `${t.a('🦅')} HYPERCLAW`),
@@ -75,7 +75,7 @@ export class Banner {
     } catch {
       console.log(t.bold('\n  🦅 HYPERCLAW\n'));
     }
-    console.log(t.muted('    🦅 HyperClaw Bot - AI Gateway - SETUP WIZARD v5.3.2 🦅\n'));
+    console.log(t.muted('    🦅 HyperClaw Bot - AI Gateway - SETUP WIZARD v5.3.4 🦅\n'));
 
     const boxOpts: any = {
       padding: 1,
@@ -155,7 +155,7 @@ export class Banner {
     const chList = cfg?.gateway?.enabledChannels ?? cfg?.channels ?? [];
     const chCount = Array.isArray(chList) ? chList.length : 0;
     console.log(t.bold('\n  HyperClaw Status\n'));
-    console.log(`  Gateway: ${running ? t.success('Running') : t.error('Stopped')}  port ${port}`);
+    console.log(`  Gateway: ${running ? t.success('✓ Running') : t.error('✗ Stopped')}  port ${port}`);
     console.log(`  Provider: ${t.c(cfg?.provider?.providerId ?? 'none')}`);
     console.log(`  Channels: ${t.c(String(chCount))}`);
     console.log();

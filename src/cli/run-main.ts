@@ -77,7 +77,7 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.3.3')
+  .version('5.3.4')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -661,27 +661,37 @@ program.command('update')
 // ─── WEB (React Web UI) ───────────────────────────────────────────────────────
 
 program.command('web')
-  .description('Launch React Web UI — auto npm install and npm run dev')
+  .description('Launch React Web UI')
   .option('--skip-install', 'Skip npm install (use if deps already installed)')
-  .option('--port <port>', 'Vite dev server port', '5173')
+  .option('--port <port>', 'Port to serve on', '3000')
   .action(async (opts: { skipInstall?: boolean; port?: string }) => {
     const path = await import('path');
     const fs = await import('fs-extra');
     const { spawn } = await import('child_process');
+    const http = await import('http');
+    const net = await import('net');
 
-    // Find apps/web by checking multiple locations
+    const PORT = parseInt(opts.port || '3000', 10);
+    const GW_PORT = 18789;
+
+    // ── 1. Check for pre-built static files (works from global npm install) ──
+    async function findBuiltDir(): Promise<string | null> {
+      const candidates = [
+        process.env.HYPERCLAW_ROOT && path.join(process.env.HYPERCLAW_ROOT, 'static', 'web'),
+        path.join(__dirname, '..', 'static', 'web'),       // dist/../static/web
+        path.join(__dirname, '..', '..', 'static', 'web'), // one more level up
+      ].filter(Boolean) as string[];
+      for (const c of candidates) {
+        if (await fs.pathExists(path.join(c, 'index.html'))) return c;
+      }
+      return null;
+    }
+
+    // ── 2. Fall back to Vite dev source (for developers with the repo) ──
     async function findWebDir(): Promise<string | null> {
       const candidates: string[] = [];
-
-      // 1. HYPERCLAW_ROOT env variable
-      if (process.env.HYPERCLAW_ROOT) {
-        candidates.push(path.join(process.env.HYPERCLAW_ROOT, 'apps', 'web'));
-      }
-
-      // 2. Current working directory
+      if (process.env.HYPERCLAW_ROOT) candidates.push(path.join(process.env.HYPERCLAW_ROOT, 'apps', 'web'));
       candidates.push(path.join(process.cwd(), 'apps', 'web'));
-
-      // 3. Walk up the directory tree from cwd
       let dir = process.cwd();
       for (let i = 0; i < 6; i++) {
         const parent = path.dirname(dir);
@@ -689,37 +699,90 @@ program.command('web')
         dir = parent;
         candidates.push(path.join(dir, 'apps', 'web'));
       }
-
-      // 4. Relative to the CLI binary (__dirname)
       candidates.push(path.join(__dirname, '..', '..', 'apps', 'web'));
       candidates.push(path.join(__dirname, '..', '..', '..', 'apps', 'web'));
-
-      for (const candidate of candidates) {
-        if (await fs.pathExists(path.join(candidate, 'package.json'))) {
-          return candidate;
-        }
+      for (const c of candidates) {
+        if (await fs.pathExists(path.join(c, 'package.json'))) return c;
       }
       return null;
     }
 
+    console.log(chalk.bold.hex('#06b6d4')('\n  HyperClaw Web UI\n'));
+
+    const builtDir = await findBuiltDir();
+    if (builtDir) {
+      // ── Serve pre-built static files ──
+      console.log(chalk.gray(`  Serving at http://localhost:${PORT}\n`));
+      const MIME: Record<string, string> = {
+        '.html': 'text/html; charset=utf-8', '.js': 'application/javascript',
+        '.css': 'text/css', '.json': 'application/json', '.png': 'image/png',
+        '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
+        '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf',
+      };
+
+      const server = http.createServer(async (req, res) => {
+        const url = (req.url || '/').split('?')[0];
+        // Proxy /api/* to gateway
+        if (url.startsWith('/api/') || url === '/api') {
+          const pr = http.request({ hostname: 'localhost', port: GW_PORT, path: req.url, method: req.method, headers: { ...req.headers, host: `localhost:${GW_PORT}` } }, (proxyRes) => {
+            res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+            proxyRes.pipe(res);
+          });
+          pr.on('error', () => { res.writeHead(502); res.end('{"error":"Gateway unreachable"}'); });
+          req.pipe(pr);
+          return;
+        }
+        // Static files with SPA fallback
+        let filePath = path.join(builtDir, url === '/' ? 'index.html' : url);
+        if (!await fs.pathExists(filePath)) filePath = path.join(builtDir, 'index.html');
+        try {
+          const content = await fs.readFile(filePath);
+          const ext = path.extname(filePath).toLowerCase();
+          res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+          res.end(content);
+        } catch { res.writeHead(404); res.end('Not found'); }
+      });
+
+      // WebSocket proxy to gateway
+      server.on('upgrade', (req, socket, head) => {
+        const target = net.createConnection(GW_PORT, 'localhost', () => {
+          target.write(`${req.method} ${req.url} HTTP/1.1\r\n`);
+          Object.entries(req.headers).forEach(([k, v]) => target.write(`${k}: ${v}\r\n`));
+          target.write('\r\n');
+          if (head?.length) target.write(head);
+        });
+        target.on('error', () => socket.destroy());
+        socket.on('error', () => target.destroy());
+        target.pipe(socket); socket.pipe(target);
+      });
+
+      server.listen(PORT, () => {
+        console.log(chalk.hex('#06b6d4')(`  Open: http://localhost:${PORT}\n`));
+      });
+      process.on('SIGINT', () => { server.close(); process.exit(0); });
+      process.on('SIGTERM', () => { server.close(); process.exit(0); });
+      return;
+    }
+
+    // ── Fall back to Vite dev server ──
     const webDir = await findWebDir();
     if (!webDir) {
-      console.log(chalk.gray('\n  React Web UI not found. Set HYPERCLAW_ROOT to your repo path or run from the repo directory.\n'));
-      console.log(chalk.gray('  Example: HYPERCLAW_ROOT=/path/to/hyperclaw hyperclaw web\n'));
+      console.log(chalk.gray('\n  Web UI not found (pre-built or source).\n'));
+      console.log(chalk.gray('  Rebuild the UI from the repo:\n'));
+      console.log(chalk.gray('    cd apps/web && npm install && npm run build\n'));
+      console.log(chalk.gray('  Or set HYPERCLAW_ROOT=/path/to/your/hyperclaw/repo\n'));
       process.exit(1);
     }
-    console.log(chalk.bold.hex('#06b6d4')('\n  🦅 HyperClaw Web UI\n'));
     if (!opts.skipInstall) {
       console.log(chalk.gray('  Installing dependencies...\n'));
       await new Promise<void>((resolve, reject) => {
-        const child = spawn('npm', ['install'], { cwd: webDir, stdio: 'inherit', shell: true });
-        child.on('error', reject);
-        child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('npm install failed'))));
+        const c = spawn('npm', ['install'], { cwd: webDir, stdio: 'inherit', shell: true });
+        c.on('error', reject);
+        c.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('npm install failed'))));
       });
     }
-    const port = opts.port || '5173';
-    console.log(chalk.gray(`  Starting dev server at http://localhost:${port}\n`));
-    const child = spawn('npm', ['run', 'dev', '--', '--port', port], { cwd: webDir, stdio: 'inherit', shell: true });
+    console.log(chalk.gray(`  Starting Vite dev server at http://localhost:${PORT}\n`));
+    const child = spawn('npm', ['run', 'dev', '--', '--port', String(PORT)], { cwd: webDir, stdio: 'inherit', shell: true });
     child.on('error', () => {});
     child.on('exit', (code) => process.exit(code ?? 0));
   });
@@ -874,7 +937,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.3.3")',
+      version: 'string (e.g. "5.3.4")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
