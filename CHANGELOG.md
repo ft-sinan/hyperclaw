@@ -16,6 +16,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.4.2] - 2026-03-13
+
+### Added
+- **Fine-tuned HyperClaw model (scaffold)** — Provider `hyperclaw` for future open-weights agent model. See [FINE_TUNED_MODEL.md](docs/FINE_TUNED_MODEL.md). Use `providerId: "hyperclaw"` with custom baseUrl when model is released.
+- **Dashboard v2** — Card layout, sessions sparkline, dark/light/system theme, i18n (ja/zh), responsive mobile.
+- **Multi-user runtime** — `agents.runtime.userWorkspaceEnabled` + `userId` for per-user SOUL/AGENTS/MEMORY from `~/.hyperclaw/users/<userId>/`.
+- **RAG document ingestion CLI** — `hyperclaw rag add <path>` to chunk and index into vector memory.
+- **ACP native image in inference** — Image blocks passed directly to vision models (Anthropic, OpenRouter).
+- **Telegram Forum topics** — Per-topic sessions and `message_thread_id` for replies.
+- **Kubernetes install docs** — Kind setup in [deployment.md](docs/deployment.md).
+
+### Changed
+- Version 5.4.1 → 5.4.2.
+
+---
+
 ## [5.4.1] - 2026-03-12
 
 ### Fixed

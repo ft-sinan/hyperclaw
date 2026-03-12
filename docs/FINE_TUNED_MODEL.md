@@ -4,7 +4,7 @@ This document describes the planned **open-weights fine-tuned model** for agent 
 
 ## Status
 
-**Planned** — Training infrastructure and release are in progress. This doc describes how to configure and use the model once available.
+**Planned** — Training infrastructure and release are in progress. Provider `hyperclaw` is registered in config (v5.4.2+); use it once the model is released.
 
 ## Config (Future)
 

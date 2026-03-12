@@ -364,7 +364,7 @@ export class GatewayServer {
 
     if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.4.1' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.4.2' }));
       return;
     }
 
@@ -872,7 +872,7 @@ export class GatewayServer {
     if (authToken && !session.authenticated) {
       this.send(session, { type: 'connect.challenge', sessionId: id });
     } else {
-      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.3.45', heartbeatInterval: 30000 });
+      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.4.2', heartbeatInterval: 30000 });
       if (this.config.hooks && this.config.deps.createHookLoader) {
         this.config.deps.createHookLoader().execute('session:start', { sessionId: id }).catch(() => {});
       }
@@ -1078,6 +1078,8 @@ export class GatewayServer {
       thinking?: 'high' | 'medium' | 'low' | 'none';
       /** Per-request model override. Overrides config provider.modelId. */
       modelOverride?: string;
+      /** Workspace path override (e.g. for sessions_spawn child). */
+      workspace?: string;
     }
   ): Promise<string> {
     const sid = opts?.currentSessionId;
@@ -1111,6 +1113,7 @@ export class GatewayServer {
       sessionId: sid,
       source,
       ...(opts?.modelOverride ? { modelOverride: opts.modelOverride } : {}),
+      ...(opts?.workspace ? { workspace: opts.workspace } : {}),
       elevated,
       onToken: opts?.onToken,
       onDone: opts?.onDone,
@@ -1197,6 +1200,18 @@ export class GatewayServer {
   getSessionHistory(sessionId: string, limit = 20): Array<{ role: string; content: string }> {
     const arr = this.transcripts.get(sessionId) ?? [];
     return arr.slice(-limit);
+  }
+
+  async spawnChildAgent(prompt: string, options?: { model?: string; workspace?: string }): Promise<{ sessionId: string; result: string }> {
+    const childId = `child_${crypto.randomBytes(8).toString('hex')}`;
+    const result = await this.callAgent(prompt, {
+      currentSessionId: undefined,
+      source: 'sessions_spawn',
+      modelOverride: options?.model,
+      workspace: options?.workspace,
+      sessionKey: childId
+    });
+    return { sessionId: childId, result };
   }
 
   send(session: Session, msg: object): void {

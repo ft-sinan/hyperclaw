@@ -64,10 +64,10 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
   const agentsList = extractAgentsList(cfg);
   const sessionCfg = extractSessionConfig(cfg);
 
-  const wrap = (c: { sendMessage: (id: string, t: string) => Promise<any>; sendTyping?: (id: string) => Promise<any> }) => {
+  const wrap = (c: { sendMessage: (id: string, t: string, opts?: any) => Promise<any>; sendTyping?: (id: string) => Promise<any> }) => {
     const ty = c.sendTyping;
     return {
-      sendMessage: (id: string | number, t: string) => c.sendMessage(String(id), t),
+      sendMessage: (id: string | number, t: string, opts?: any) => (c.sendMessage as any)(String(id), t, opts),
       sendTyping: ty ? (id: string | number) => ty(String(id)) : undefined
     };
   };
@@ -91,7 +91,7 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
       teamId?: string;
       senderRoles?: string[];
     },
-    conn: { sendMessage: (id: string | number, t: string) => Promise<any>; sendTyping?: (id: string | number) => Promise<any> },
+    conn: { sendMessage: (id: string | number, t: string, opts?: any) => Promise<any>; sendTyping?: (id: string | number) => Promise<any> },
     channelId: string
   ) => {
     try {
@@ -118,8 +118,9 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
           },
           async (_peerId, _agentId, response) => {
             const chunks = chunkForChannel(response, channelId);
+            const sendOpts = channelId === 'telegram' && msg.threadId ? { message_thread_id: parseInt(msg.threadId, 10) } : undefined;
             for (const chunk of chunks) {
-              await withRetry(() => conn.sendMessage(msg.chatId, chunk), {
+              await withRetry(() => conn.sendMessage(msg.chatId, chunk, sendOpts), {
                 onRetry: (n, err) => console.error(`[broadcast] send retry ${n}: ${err.message}`)
               });
             }
@@ -153,14 +154,16 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
         { onRetry: (n, err) => console.error(`[channels] ${channelId} agent retry ${n}: ${err.message}`) }
       );
       const chunks = chunkForChannel(response, channelId);
+      const sendOpts = channelId === 'telegram' && msg.threadId ? { message_thread_id: parseInt(msg.threadId, 10) } : undefined;
       for (const chunk of chunks) {
-        await withRetry(() => conn.sendMessage(msg.chatId, chunk), {
+        await withRetry(() => conn.sendMessage(msg.chatId, chunk, sendOpts), {
           onRetry: (n, err) => console.error(`[channels] ${channelId} send retry ${n}: ${err.message}`)
         });
       }
     } catch (e: any) {
       console.error(`[channels] ${channelId} error: ${e.message}`);
-      await conn.sendMessage(msg.chatId, `Error: ${e.message}`).catch(() => {});
+      const sendOpts = channelId === 'telegram' && msg.threadId ? { message_thread_id: parseInt(msg.threadId, 10) } : undefined;
+      await conn.sendMessage(msg.chatId, `Error: ${e.message}`, sendOpts).catch(() => {});
     }
   };
 

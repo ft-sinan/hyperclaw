@@ -15,12 +15,42 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.4.1';
+const APP_VERSION = '5.4.2';
 
-// ─── Theme context ────────────────────────────────────────────────────────────
+type Locale = 'en' | 'ja' | 'zh';
+const I18N: Record<Locale, Record<string, string>> = {
+  en: {
+    dashboard: 'Dashboard', chat: 'Chat', canvas: 'Canvas', hub: 'Skills', memory: 'Memory', settings: 'Settings',
+    online: '✓ Online', offline: '✗ Offline', loading: 'Loading…', gateway: 'Gateway', channels: 'Channels', sessions: 'Sessions',
+    agent: 'Agent', model: 'Model', port: 'Port', uptime: 'Uptime', runs: 'Runs', input: 'Input', output: 'Output', cost: 'Cost',
+    newChat: 'New chat', clear: 'Clear', voice: 'Voice', terminal: 'Terminal', search: 'Search…', customize: 'Customize',
+    gatewayConnection: 'Gateway Connection', gatewayUrl: 'Gateway URL', apply: 'Apply',
+  },
+  ja: {
+    dashboard: 'ダッシュボード', chat: 'チャット', canvas: 'キャンバス', hub: 'スキル', memory: 'メモリ', settings: '設定',
+    online: 'オンライン', offline: 'オフライン', loading: '読み込み中…', gateway: 'ゲートウェイ', channels: 'チャンネル', sessions: 'セッション',
+    agent: 'エージェント', model: 'モデル', port: 'ポート', uptime: '稼働時間', runs: '実行数', input: '入力', output: '出力', cost: 'コスト',
+    newChat: '新規チャット', clear: 'クリア', voice: '音声', terminal: 'ターミナル', search: '検索…', customize: 'カスタマイズ',
+    gatewayConnection: 'ゲートウェイ接続', gatewayUrl: 'ゲートウェイURL', apply: '適用',
+  },
+  zh: {
+    dashboard: '仪表盘', chat: '聊天', canvas: '画布', hub: '技能', memory: '记忆', settings: '设置',
+    online: '在线', offline: '离线', loading: '加载中…', gateway: '网关', channels: '频道', sessions: '会话',
+    agent: '代理', model: '模型', port: '端口', uptime: '运行时长', runs: '运行次数', input: '输入', output: '输出', cost: '费用',
+    newChat: '新对话', clear: '清空', voice: '语音', terminal: '终端', search: '搜索…', customize: '自定义',
+    gatewayConnection: '网关连接', gatewayUrl: '网关URL', apply: '应用',
+  },
+};
 
-interface ThemeCtxType { isDark: boolean; toggle: () => void; }
-const ThemeCtx = createContext<ThemeCtxType>({ isDark: true, toggle: () => {} });
+interface I18nCtxType { locale: Locale; setLocale: (l: Locale) => void; t: (k: string) => string; }
+const I18nCtx = createContext<I18nCtxType>({ locale: 'en', setLocale: () => {}, t: k => k });
+const useI18n = () => useContext(I18nCtx);
+
+// ─── Theme context (dark | light | system) ────────────────────────────────────
+
+type ThemeMode = 'dark' | 'light' | 'system';
+interface ThemeCtxType { isDark: boolean; mode: ThemeMode; setMode: (m: ThemeMode) => void; toggle: () => void; }
+const ThemeCtx = createContext<ThemeCtxType>({ isDark: true, mode: 'dark', setMode: () => {}, toggle: () => {} });
 const useTheme = () => useContext(ThemeCtx);
 
 // ─── API ──────────────────────────────────────────────────────────────────────
@@ -217,13 +247,15 @@ function CustomizeModal({ onSave, onClose }: { onSave: (p: Project) => void; onC
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS: Array<{ page: Page; label: string; icon: JSX.Element }> = [
-  { page: 'dashboard', label: 'Dashboard', icon: <span>📊</span> },
-  { page: 'canvas',    label: 'Canvas',    icon: <span>🎨</span> },
-  { page: 'hub',       label: 'Skills',    icon: <span>🧩</span> },
-  { page: 'memory',    label: 'Memory',    icon: <span>🧠</span> },
-  { page: 'settings',  label: 'Settings',  icon: <Icons.Settings /> },
-];
+function NAV_ITEMS(t: (k: string) => string): Array<{ page: Page; label: string; icon: JSX.Element }> {
+  return [
+    { page: 'dashboard', label: t('dashboard'), icon: <span>📊</span> },
+    { page: 'canvas',    label: t('canvas'),    icon: <span>🎨</span> },
+    { page: 'hub',       label: t('hub'),       icon: <span>🧩</span> },
+    { page: 'memory',    label: t('memory'),    icon: <span>🧠</span> },
+    { page: 'settings',  label: t('settings'),  icon: <Icons.Settings /> },
+  ];
+}
 
 interface SidebarProps {
   page: Page; setPage: (p: Page) => void;
@@ -234,6 +266,7 @@ interface SidebarProps {
 function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: SidebarProps) {
   const { data: status, isError } = useGatewayStatus();
   const { isDark, toggle } = useTheme();
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [showCustomize, setShowCustomize] = useState(false);
   const [customProjects, setCustomProjects] = useState<Project[]>(() => {
@@ -279,20 +312,20 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
             style={{ background: 'var(--accentBg)', color: 'var(--accent)', border: '1px solid var(--accentBorder)' }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '.8')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-            <Icons.Plus /> New chat
+            <Icons.Plus /> {t('newChat')}
           </button>
 
           {/* Search */}
           <div className="relative mb-1">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text3)' }}><Icons.Search /></span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('search')}
               className="input-base w-full rounded-lg pl-7 pr-3 py-1.5 text-xs" />
           </div>
 
           {/* Customize */}
           <button onClick={() => setShowCustomize(true)}
             className="nav-item w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs">
-            <Icons.Settings /> Customize
+            <Icons.Settings /> {t('customize')}
           </button>
         </div>
 
@@ -330,7 +363,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
 
         {/* Nav */}
         <div className="px-3 pb-2 pt-1 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
-          {NAV_ITEMS.map(({ page: p, label, icon }) => (
+          {NAV_ITEMS(t).map(({ page: p, label, icon }) => (
             <button key={p} onClick={() => setPage(p)}
               className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${page === p ? 'nav-active' : 'nav-item'}`}>
               {icon}<span>{label}</span>
@@ -343,7 +376,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
           <div className={`inline-flex items-center gap-1.5 text-xs font-medium ${!!status && !isError ? 'accent-text' : 'text-red-400'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${!!status && !isError ? 'animate-pulse' : ''}`}
               style={{ background: !!status && !isError ? 'var(--accent)' : '#ef4444' }} />
-            {!!status && !isError ? '✓ Online' : '✗ Offline'}
+            {!!status && !isError ? t('online') : t('offline')}
           </div>
           {status?.model && <div className="text-[10px] mt-0.5 truncate font-mono" style={{ color: 'var(--text3)' }}>{status.model}</div>}
         </div>
@@ -356,6 +389,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
 
 function ChatPage({ activeProject }: { activeProject: string }) {
   const { messages, sendMutation, streaming, clearChat } = useChat();
+  const { t } = useI18n();
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState<ThinkingLevel>('none');
   const [workingSec, setWorkingSec] = useState(0);
@@ -420,14 +454,14 @@ function ChatPage({ activeProject }: { activeProject: string }) {
         style={{ borderBottom: '1px solid var(--border)', background: 'var(--header)' }}>
         <span className="text-sm font-medium" style={{ color: 'var(--text2)' }}>{getProjectName(activeProject)}</span>
         <div className="flex items-center gap-1.5">
-          <HdrBtn onClick={clearChat}>Clear</HdrBtn>
+          <HdrBtn onClick={clearChat}>{t('clear')}</HdrBtn>
           {micSupported && (
             <HdrBtn onClick={() => setVoiceOut(v => !v)} active={voiceOut} title="Toggle voice output">
-              <Icons.Speaker on={voiceOut} /> Voice
+              <Icons.Speaker on={voiceOut} /> {t('voice')}
             </HdrBtn>
           )}
           <HdrBtn onClick={() => setTerminalOpen(o => !o)} active={terminalOpen} title="Toggle terminal">
-            <Icons.Terminal /> Terminal
+            <Icons.Terminal /> {t('terminal')}
           </HdrBtn>
         </div>
       </div>
@@ -671,42 +705,69 @@ function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// ─── Dashboard v2 (card layout, real-time chart, i18n, responsive) ──────────────
+
+function SessionsSparkline({ data }: { data: number[] }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const w = 120; const h = 32; const pad = 2;
+  const pts = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (w - 2 * pad);
+    const y = h - pad - (v / max) * (h - 2 * pad);
+    return `${x},${y}`;
+  }).join(' ');
+  return (
+    <svg width={w} height={h} className="flex-shrink-0">
+      <polyline points={pts} fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+    </svg>
+  );
+}
 
 function DashboardPage() {
   const { data: status, isLoading, isError } = useGatewayStatus();
   const { data: costData } = useCostSummary();
-  if (isLoading) return <div className="p-8 text-sm" style={{ color: 'var(--text3)' }}>Loading…</div>;
+  const { t } = useI18n();
+  const [sessionsHistory, setSessionsHistory] = useState<number[]>([]);
+  useEffect(() => {
+    if (status?.sessions != null) {
+      setSessionsHistory(prev => [...prev.slice(-19), status.sessions].slice(-20));
+    }
+  }, [status?.sessions]);
+
+  if (isLoading) return <div className="p-6 sm:p-8 text-sm" style={{ color: 'var(--text3)' }}>{t('loading')}</div>;
   return (
-    <div className="p-6 space-y-4 overflow-y-auto">
-      <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'var(--accentBg)', border: '1px solid var(--accentBorder)' }}>
+    <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+      <div className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ background: 'var(--accentBg)', border: '1px solid var(--accentBorder)' }}>
         <div>
-          <div className="text-xs uppercase tracking-wider flex items-center gap-1 accent-text">🦅 HyperClaw Dashboard</div>
-          <div className="mt-1 text-xl font-bold">{status?.agentName || 'Your gateway agent'}</div>
-          <div className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>{status ? `${isError ? 'Offline' : 'Online'} · ${status.model} · :${status.port}` : 'Waiting…'}</div>
+          <div className="text-xs uppercase tracking-wider flex items-center gap-1 accent-text">🦅 HyperClaw {t('dashboard')}</div>
+          <div className="mt-1 text-lg sm:text-xl font-bold">{status?.agentName || 'Your gateway agent'}</div>
+          <div className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>{status ? `${isError ? t('offline') : t('online')} · ${status.model} · :${status.port}` : '—'}</div>
         </div>
         <div className={`inline-flex items-center gap-1.5 text-xs font-medium ${!!status && !isError ? 'accent-text' : 'text-red-400'}`}>
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: !!status && !isError ? 'var(--accent)' : '#ef4444' }} />
-          {!!status && !isError ? '✓ Online' : '✗ Offline'}
+          {!!status && !isError ? t('online') : t('offline')}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { label: 'Gateway', value: isError ? 'Offline' : 'Online', accent: true, icon: '📡' },
-          { label: 'Channels', value: String(status?.channels?.length || 0), accent: true, icon: '📱' },
-          { label: 'Sessions', value: String(status?.sessions || 0), accent: false, icon: '👥' },
+          { label: t('gateway'), value: isError ? t('offline') : t('online'), accent: true, icon: '📡' },
+          { label: t('channels'), value: String(status?.channels?.length || 0), accent: true, icon: '📱' },
+          { label: t('sessions'), value: String(status?.sessions ?? 0), accent: false, icon: '👥' },
         ].map(c => (
-          <div key={c.label} className="card rounded-xl">
-            <div className="text-xs flex items-center gap-1.5 mb-2" style={{ color: 'var(--text3)' }}>{c.icon} {c.label}</div>
-            <div className={`text-2xl font-bold ${c.accent ? 'accent-text' : ''}`} style={!c.accent ? { color: 'var(--text)' } : {}}>{c.value}</div>
+          <div key={c.label} className="card rounded-xl flex flex-col sm:flex-row sm:items-center gap-2">
+            <div>
+              <div className="text-xs flex items-center gap-1.5 mb-1" style={{ color: 'var(--text3)' }}>{c.icon} {c.label}</div>
+              <div className={`text-xl sm:text-2xl font-bold ${c.accent ? 'accent-text' : ''}`} style={!c.accent ? { color: 'var(--text)' } : {}}>{c.value}</div>
+            </div>
+            {c.label === t('sessions') && sessionsHistory.length >= 2 && <SessionsSparkline data={sessionsHistory} />}
           </div>
         ))}
       </div>
       {status && (
         <div className="card rounded-xl">
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>Gateway Info</div>
-          {[['Port', String(status.port)], ['Model', status.model], ['Agent', status.agentName], ['Uptime', status.uptime]].map(([k, v]) => (
-            <div key={k} className="flex justify-between text-sm py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>{t('gateway')} Info</div>
+          {[[t('port'), String(status.port)], [t('model'), status.model], [t('agent'), status.agentName], [t('uptime'), status.uptime]].map(([k, v]) => (
+            <div key={String(k)} className="flex justify-between text-sm py-1.5" style={{ borderBottom: '1px solid var(--border)' }}>
               <span style={{ color: 'var(--text3)' }}>{k}</span>
               <span className="font-mono text-xs" style={{ color: 'var(--text2)' }}>{v}</span>
             </div>
@@ -715,10 +776,10 @@ function DashboardPage() {
       )}
       {costData?.summary && (costData.summary.totalRuns ?? 0) > 0 && (
         <div className="card rounded-xl">
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>💰 Cost</div>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>💰 {t('cost')}</div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            {[['Runs', String(costData.summary.totalRuns)], ['Input', (costData.summary.totalInput ?? 0).toLocaleString()], ['Output', (costData.summary.totalOutput ?? 0).toLocaleString()], ['USD', '$' + (costData.summary.totalCostUsd ?? 0).toFixed(4)]].map(([k, v]) => (
-              <div key={k}><span style={{ color: 'var(--text3)' }}>{k}</span><div className="font-mono accent-text">{v}</div></div>
+            {[[t('runs'), String(costData.summary.totalRuns)], [t('input'), (costData.summary.totalInput ?? 0).toLocaleString()], [t('output'), (costData.summary.totalOutput ?? 0).toLocaleString()], ['USD', '$' + (costData.summary.totalCostUsd ?? 0).toFixed(4)]].map(([k, v]) => (
+              <div key={String(k)}><span style={{ color: 'var(--text3)' }}>{k}</span><div className="font-mono accent-text">{v}</div></div>
             ))}
           </div>
         </div>
@@ -745,6 +806,8 @@ function PlaceholderPage({ title, icon, desc, cmd }: { title: string; icon: stri
 function SettingsPage() {
   const { data: status } = useGatewayStatus();
   const qc = useQueryClient();
+  const { t, locale, setLocale } = useI18n();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const [gatewayUrl, setGatewayUrl] = useState(DEFAULT_GW);
   const [applied, setApplied] = useState(false);
   const applyUrl = useCallback(() => {
@@ -753,23 +816,45 @@ function SettingsPage() {
   }, [gatewayUrl, qc]);
 
   return (
-    <div className="p-6 space-y-4 overflow-y-auto">
-      <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text2)' }}>⚙️ Settings</h2>
+    <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+      <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text2)' }}>⚙️ {t('settings')}</h2>
       <div className="card rounded-xl space-y-3">
-        <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Gateway Connection</div>
+        <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text3)' }}>{t('gatewayConnection')}</div>
         <div>
-          <label className="text-xs mb-1 block" style={{ color: 'var(--text3)' }}>Gateway URL</label>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text3)' }}>{t('gatewayUrl')}</label>
           <div className="flex gap-2">
             <input value={gatewayUrl} onChange={e => setGatewayUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyUrl()}
               className="input-base flex-1 rounded-lg px-3 py-2 text-sm" />
             <button onClick={applyUrl} className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-white ${applied ? 'bg-green-600' : 'btn-primary'}`}>
-              {applied ? '✓' : 'Apply'}
+              {applied ? '✓' : t('apply')}
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: status ? 'var(--accent)' : '#ef4444', animation: status ? 'pulse 2s infinite' : 'none' }} />
           <span className="text-xs" style={{ color: 'var(--text3)' }}>{status ? `Connected · port ${status.port}` : 'Disconnected'}</span>
+        </div>
+      </div>
+      <div className="card rounded-xl space-y-3">
+        <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Theme</div>
+        <div className="flex gap-2">
+          {(['dark', 'light', 'system'] as ThemeMode[]).map(m => (
+            <button key={m} onClick={() => { setThemeMode(m); try { localStorage.setItem('hc_theme', m); } catch {} }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize ${themeMode === m ? 'btn-primary' : 'nav-item'}`}>
+              {m}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="card rounded-xl space-y-3">
+        <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Language / 言語 / 语言</div>
+        <div className="flex gap-2">
+          {(['en', 'ja', 'zh'] as Locale[]).map(l => (
+            <button key={l} onClick={() => setLocale(l)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${locale === l ? 'btn-primary' : 'nav-item'}`}>
+              {l === 'en' ? 'English' : l === 'ja' ? '日本語' : '中文'}
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -782,19 +867,41 @@ function AppShell() {
   const [page, setPage] = useState<Page>('chat');
   const [activeProject, setActiveProject] = useState('');
   const [chatKey, setChatKey] = useState(0);
-  const [isDark, setIsDark] = useState(() => {
-    try { return localStorage.getItem('hc_theme') !== 'light'; } catch { return true; }
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try { return (localStorage.getItem('hc_theme') as ThemeMode) || 'dark'; } catch { return 'dark'; }
+  });
+  const [locale, setLocale] = useState<Locale>(() => {
+    try { return (localStorage.getItem('hc_locale') as Locale) || 'en'; } catch { return 'en'; }
   });
 
   const { data: gwStatus } = useGatewayStatus();
   const isDaemon = !!gwStatus?.daemonMode;
 
+  const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const isDark = themeMode === 'system' ? prefersDark : themeMode === 'dark';
+
   const toggle = useCallback(() => {
-    setIsDark(d => {
-      const next = !d;
-      try { localStorage.setItem('hc_theme', next ? 'dark' : 'light'); } catch {}
-      return next;
-    });
+    const next: ThemeMode = isDark ? 'light' : 'dark';
+    setThemeMode(next);
+    try { localStorage.setItem('hc_theme', next); } catch {}
+  }, [isDark]);
+
+  const cycleThemeMode = useCallback(() => {
+    const next: ThemeMode = themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'system' : 'dark';
+    setThemeMode(next);
+    try { localStorage.setItem('hc_theme', next); } catch {}
+  }, [themeMode]);
+
+  const handleSetLocale = useCallback((l: Locale) => {
+    setLocale(l);
+    try { localStorage.setItem('hc_locale', l); } catch {}
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const fn = () => { setThemeMode(m => m === 'system' ? m : m); };
+    mq?.addEventListener?.('change', fn);
+    return () => mq?.removeEventListener?.('change', fn);
   }, []);
 
   useEffect(() => {
@@ -803,6 +910,8 @@ function AppShell() {
   }, [isDark, isDaemon]);
 
   const handleNewChat = () => { setChatKey(k => k + 1); setPage('chat'); };
+
+  const t = useCallback((k: string) => I18N[locale][k] ?? I18N.en[k] ?? k, [locale]);
 
   const renderPage = () => {
     switch (page) {
@@ -816,13 +925,15 @@ function AppShell() {
   };
 
   return (
-    <ThemeCtx.Provider value={{ isDark, toggle }}>
+    <ThemeCtx.Provider value={{ isDark, mode: themeMode, setMode: setThemeMode, toggle: cycleThemeMode }}>
+      <I18nCtx.Provider value={{ locale, setLocale: handleSetLocale, t }}>
       <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
         <Sidebar page={page} setPage={setPage} activeProject={activeProject} setActiveProject={setActiveProject} onNewChat={handleNewChat} />
         <main className="flex-1 flex flex-col overflow-hidden min-w-0">
           {renderPage()}
         </main>
       </div>
+      </I18nCtx.Provider>
     </ThemeCtx.Provider>
   );
 }

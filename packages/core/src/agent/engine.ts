@@ -36,6 +36,10 @@ export interface AgentEngineOptions {
   modelOverride?: string;
   /** Override workspace directory for context */
   workspace?: string;
+  /** Image blocks for native vision (ACP / multimodal). Passed directly to inference. */
+  imageBlocks?: Array<{ data: string; mimeType?: string }>;
+  /** User ID for per-user context isolation. When agents.runtime.userWorkspaceEnabled, loads SOUL/AGENTS/MEMORY from ~/.hyperclaw/users/<userId>/ */
+  userId?: string;
 }
 
 export interface AgentEngineResult {
@@ -122,7 +126,7 @@ export async function resolveTools(opts: {
   const { loadMCPTools } = await import('../../../../src/services/mcp-loader');
   const { applyToolPolicy } = await import('../../../../src/infra/tool-policy');
 
-  const CUSTOM_BASEURL_PROVIDERS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go']);
+  const CUSTOM_BASEURL_PROVIDERS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go','hyperclaw']);
   const isLocal = cfg?.provider?.providerId === 'local' || cfg?.provider?.providerId === 'ollama' || cfg?.provider?.providerId === 'lmstudio';
   const provider = cfg?.provider?.providerId === 'anthropic' || cfg?.provider?.providerId === 'anthropic-oauth' || cfg?.provider?.providerId === 'anthropic-setup-token' ? 'anthropic'
     : (cfg?.provider?.providerId === 'custom' || isLocal || CUSTOM_BASEURL_PROVIDERS.has(cfg?.provider?.providerId ?? '')) ? 'custom' : 'openrouter';
@@ -191,7 +195,7 @@ export async function runAgentEngine(
   opts: AgentEngineOptions & { activeServer?: unknown; appendTranscript?: (sid: string, role: string, content: string) => void }
 ): Promise<AgentEngineResult> {
   const cfg: HyperClawConfig = await fs.readJson(getConfigPath()).catch(() => ({}));
-  const CUSTOM_BASEURL_IDS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go']);
+  const CUSTOM_BASEURL_IDS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go','hyperclaw']);
   const isLocalProvider = cfg?.provider?.providerId === 'local' || cfg?.provider?.providerId === 'ollama' || cfg?.provider?.providerId === 'lmstudio';
   const apiKey = await (await import('../../../../src/infra/env-resolve')).getProviderCredentialAsync(cfg);
   if (!apiKey && !isLocalProvider) {
@@ -212,14 +216,23 @@ export async function runAgentEngine(
   }
 
   // Restore transcript by sessionKey for channel/REST traffic; use sessionKey as persistence key
-  type InfMsg = { role: 'user' | 'assistant' | 'tool'; content: string };
-  let messagesForInference: InfMsg[] = [{ role: 'user', content: message }];
+  type InfMsg = import('./inference').InferenceMessage;
+  const userContent: string | import('./inference').ContentBlock[] = opts.imageBlocks?.length
+    ? [
+        ...(message ? [{ type: 'text' as const, text: message }] : []),
+        ...opts.imageBlocks.map((img: { data: string; mimeType?: string }) => ({
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: img.mimeType || 'image/png', data: img.data }
+        }))
+      ]
+    : message;
+  let messagesForInference: InfMsg[] = [{ role: 'user', content: userContent }];
   if (effectiveKey && opts.getTranscript) {
     try {
       const restored = await opts.getTranscript(effectiveKey);
       if (restored && restored.length > 0) {
         const valid = restored.filter(t => (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string') as InfMsg[];
-        messagesForInference = [...valid, { role: 'user' as const, content: message }];
+        messagesForInference = [...valid, { role: 'user' as const, content: userContent }];
       }
     } catch (e) {
       console.warn('[engine] Failed to restore transcript for', effectiveKey, (e as Error).message);
@@ -229,8 +242,15 @@ export async function runAgentEngine(
     opts.appendTranscript(effectiveKey, 'user', message, opts.source);
   }
 
+  // Per-user workspace: when agents.runtime.userWorkspaceEnabled and userId set, load context from ~/.hyperclaw/users/<userId>/
+  let workspaceDir = opts.workspace;
+  if (!workspaceDir && opts.userId && (cfg?.agents?.runtime as { userWorkspaceEnabled?: boolean })?.userWorkspaceEnabled) {
+    const userDir = path.join(getHyperClawDir(), 'users', opts.userId);
+    if (await fs.pathExists(userDir)) workspaceDir = userDir;
+  }
+
   // Build context
-  let context = await loadWorkspaceContext(opts.workspace);
+  let context = await loadWorkspaceContext(workspaceDir);
   try {
     const { getContextSummary } = await import('../../../../src/services/knowledge-graph');
     const kg = await getContextSummary(25);

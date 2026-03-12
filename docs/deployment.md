@@ -85,6 +85,40 @@ Or: create project at [railway.app/new](https://railway.app/new), deploy from Gi
 
 Mount `~/.hyperclaw` (or `$HYPERCLAW_DIR`) for config, credentials, and channel state.
 
+## Kubernetes
+
+Deploy to Kubernetes with raw manifests or [Kind](https://kind.sigs.k8s.io/) for local dev.
+
+### Kind setup (local)
+
+```bash
+# Install Kind: https://kind.sigs.k8s.io/docs/user/quick-start/
+kind create cluster --name hyperclaw
+
+# Create secrets (replace with your keys)
+kubectl create secret generic hyperclaw-secrets \
+  --from-literal=OPENAI_API_KEY=sk-... \
+  --from-literal=ANTHROPIC_API_KEY=sk-ant-...
+
+# Apply manifests
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/deployment.yaml
+
+# Port-forward for local access
+kubectl port-forward svc/hyperclaw 18789:18789
+```
+
+### Manifests (`k8s/`)
+
+| File | Purpose |
+|------|---------|
+| `configmap.yaml` | HYPERCLAW_GATEWAY_PORT, env defaults |
+| `deployment.yaml` | Deployment, Service (port 18789) |
+
+Use [External Secrets](https://external-secrets.io/) or [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) for production. See [k8s/README.md](../k8s/README.md).
+
+---
+
 ## Pi Agent (.pi/)
 
 Lightweight runtime for Raspberry Pi and embedded devices:

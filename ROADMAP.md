@@ -67,63 +67,28 @@
 
 ---
 
-## 🔄 In Progress
+## ✅ Recently shipped (v5.4)
 
-- [x] **Web UI** — apps/web React dashboard (chat, terminal panel, theme)
-- [x] **Dashboard v2** — `apps/web/DASHBOARD_V2.md` plan (card layout, i18n, responsive)
-- [x] **Skill marketplace** — `hyperclaw hub` (search, install, list, marketplace) + community registry
-- [x] **RAG** — `packages/rag` scaffold, chunkText for document indexing
-- [x] **Multi-user mode** — config schema `multiUser.users`, scaffold
+Web UI, Dashboard v2 plan, Skill marketplace, RAG scaffold, Multi-user, Voice-first, Telegram inline, Encrypted config, memory-lancedb, OpenTelemetry, phone-control, device-pair, llm-task, Kubernetes (k8s/), Pi agent (.pi/), i18n, backup create/verify, Discord autoArchiveDuration, TUI agent inference, git hash in --version, HyperClawKit, Brave LLM Context, ACP Provenance, iOS Home Canvas, macOS model picker, Ollama onboarding, OpenCode Go, Multimodal memory, Gemini embedding, ACP resumeSessionId, Node pending queue, LLM thinking override, call_remote_agent, Railway/Render/Fly deploy, Plugin SDK, Memory V2, ACP sessions_spawn + ACPX image prompts. See [CHANGELOG](CHANGELOG.md).
 
 ---
 
-## 📅 Planned
+## 📅 Planned (next)
 
-### Short-term (next release)
-- [x] **Voice-first mode** — `alwaysOn` config in voice-call extension, wake-word
-- [x] **Scheduled skills** — cron task runner with skillId (`hyperclaw cron add -s <skillId>`, cron-tasks.json)
-- [x] **Telegram inline mode** — `inlineMode: true`, @botname query, answerInlineQuery
-- [x] **Encrypted config** — HYPERCLAW_CONFIG_KEY (32-byte hex), AES-256-GCM
+### Short-term
+- [x] **Dashboard v2 implementation** — Card layout, sessions sparkline, dark/light/system theme, i18n (ja/zh), responsive
+- [x] **RAG document ingestion CLI** — `hyperclaw rag add <path>`, auto-chunk and index
+- [x] **ACP native image in inference** — Pass image blocks directly to vision models
+- [ ] **Discord Voice channels** — Join voice, transcribe, respond (experimental)
+- [x] **Telegram Forum topics** — Per-topic sessions, reply in thread via message_thread_id
+- [x] **Multi-user runtime** — Per-user workspace (agents.runtime.userWorkspaceEnabled + userId)
+- [x] **Kubernetes install docs** — Kind setup, manifests in k8s/, deployment.md
 
 ### Medium-term
-- [x] **memory-lancedb** — Vector DB memory (`packages/memory-lancedb`), `hyperclaw memory add-fact` + `search-vector`
-- [x] **OpenTelemetry diagnostics** — `packages/diagnostics-otel`, tracer, startSpan, runInSpan
-- [x] **phone-control extension** — `extensions/phone-control`, handlePhoneControl
-- [x] **device-pair extension** — `extensions/device-pair`, getQRPayload, PairResult
-- [x] **Kubernetes deployment** — `k8s/` deployment, Service, configmap, secrets
-- [x] **Pi agent runtime** — `.pi/` lightweight HTTP server
-- [x] **i18n** — `locales/ja.json`, `zh.json`, `en.json`, `src/i18n` loadLocale, t()
-- [x] **backup create/verify** — CLI backup, verify, restore for local state
-- [x] **Talk mode silenceTimeoutMs** — config for auto-send after silence (VAD)
-- [x] **Discord autoArchiveDuration** — thread archiving config (1h/1d/3d/1w)
-- [x] **TUI agent inference** — auto-detect agent from workspace in `hyperclaw chat`
-- [x] **git hash in --version** — short commit hash in version output
-- [x] **HyperClawKit** — NodeStatus, ChatSession, VoiceConfig types (packages/hyperclawkit)
-- [x] **llm-task extension** — `extensions/llm-task`, decomposeTask, runTasks
-- [x] **Brave LLM Context mode** — web search with grounding snippets
-- [x] **ACP Provenance** — X-HyperClaw-Provenance-* headers + response.provenance
-- [x] **iOS Home Canvas** — Home tab with welcome + agent overview + quick actions
-- [x] **macOS model picker** — Settings: modelId + thinkingLevel, persisted, used in chat thinking level
-- [x] **Ollama onboarding** — first-class Ollama wizard (cloud + local mode)
-- [x] **OpenCode Go provider** — new AI provider for code
-- [x] **Multimodal memory** — image + audio indexing with Gemini embeddings (`hyperclaw memory add-image`, `add-audio`)
-- [x] **Gemini embedding** — gemini-embedding-2-preview for memory search (VectorMemoryService: embeddingProvider: 'gemini')
-- [x] **ACP resumeSessionId** — resume existing ACP/Codex session (threads create --resume & create({ resumeSessionId }))
-- [x] **Node pending work queue** — queue for dormant nodes (`hyperclaw node queue`, node-pending-queue.ts)
-- [x] **LLM thinking override** — per-workflow thinking level (AgentListItem.thinking, API body.thinking)
-- [x] **Multi-agent collaboration** — `call_remote_agent` tool, `multiAgent.remotes` config
-- [x] **One-click cloud deploy** — Railway / Render / Fly.io deploy (`hyperclaw deploy -p railway|render|fly`)
-- [x] **Plugin SDK** — stable API (docs/PLUGIN_SDK.md, src/sdk/ types + definePlugin/defineTool)
-- [x] **Memory V2** — semantic search over conversation history (onTranscriptAppend → vector DB indexing)
-- [x] **Fine-tuned HyperClaw model** — roadmap + config docs (docs/FINE_TUNED_MODEL.md)
-
-> **ACP (Agent Client Protocol)** — [x] stdio server (`hyperclaw acp`) with initialize, session/new, session/load, session/prompt, session/cancel; tool streaming to IDE via session/update. [ ] sessions_spawn gateway impl; [ ] ACPX runtime for image prompts.
-
-### Long-term
-- [ ] **HyperClaw Cloud** (optional) — hosted relay for channels that 
-
-- [ ] **Mobile-native agent** — full agent running on-device on iOS/Android
+- [ ] **HyperClaw Cloud**  — Hosted relay for channels 
+- [ ] **Mobile-native agent** — Full agent on-device on iOS/Android
 - [ ] **Enterprise features** — SSO, audit logs, team management
+- [x] **Fine-tuned HyperClaw model** — Provider scaffold + docs (per FINE_TUNED_MODEL.md)
 
 ---
 

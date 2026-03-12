@@ -201,7 +201,7 @@ Config values win over env. `TELEGRAM_BOT_TOKEN` applies when `channels.telegram
 | Long polling | ✅ |
 | Webhook mode | ⚠️ Connector supports; gateway wiring optional |
 | Inline mode (@botname query) | ✅ `inlineMode: true` |
-| Forum topics | Planned |
+| Forum topics | ✅ Per-topic sessions; replies to topic thread |
 | Inline buttons | Planned |
 | Streaming preview | Planned |
 | Reactions | Planned |

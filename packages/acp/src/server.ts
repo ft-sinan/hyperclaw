@@ -69,7 +69,7 @@ export class ACPServer {
       agentInfo: {
         name: 'hyperclaw',
         title: 'HyperClaw',
-        version: '5.4.1'
+        version: '5.4.2'
       },
       authMethods: []
     };
@@ -136,13 +136,24 @@ export class ACPServer {
     const sess = this.sessions.get(params.sessionId);
     if (!sess) throw new Error(`Session not found: ${params.sessionId}`);
 
-    const userText = params.prompt
-      .map(p => (p.type === 'text' ? p.text : p.type === 'resource' ? p.resource.text ?? '' : ''))
-      .filter(Boolean)
-      .join('\n');
-    if (!userText.trim()) throw new Error('Empty prompt');
+    const parts: string[] = [];
+    const images: Array<{ data: string; mimeType?: string }> = [];
+    for (const p of params.prompt) {
+      if (p.type === 'text') parts.push(p.text);
+      else if (p.type === 'resource') parts.push(p.resource.text ?? '');
+      else if (p.type === 'image' && p.image?.data) {
+        const mime = p.image.mimeType || 'image/png';
+        images.push({ data: p.image.data, mimeType: mime });
+      }
+    }
+    const userText = parts.filter(Boolean).join('\n');
+    const imageRefs = images.map((img, i) =>
+      `[Attached image ${i + 1} — use analyze_image with data URI: data:${img.mimeType || 'image/png'};base64,${img.data}]`
+    ).join('\n');
+    const fullMessage = [userText, imageRefs].filter(Boolean).join('\n\n') || userText;
+    if (!fullMessage.trim() && images.length === 0) throw new Error('Empty prompt');
 
-    sess.transcript.push({ role: 'user', content: userText });
+    sess.transcript.push({ role: 'user', content: fullMessage });
     sess.lastActive = new Date().toISOString();
 
     const abortController = new AbortController();
@@ -153,8 +164,9 @@ export class ACPServer {
       const { runAgentEngine } = await import('@hyperclaw/core');
       const toolCallIds = new Map<string, string>();
 
-      const result = await runAgentEngine(userText, {
+      const result = await runAgentEngine(userText || fullMessage, {
         sessionId: params.sessionId,
+        imageBlocks: images.length ? images : undefined,
         source: 'acp',
         elevated: true,
         transcript: sess.transcript.slice(0, -1),

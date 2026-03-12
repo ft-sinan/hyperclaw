@@ -60,6 +60,25 @@ Use `session.identityLinks` to map provider-prefixed peer IDs to a canonical ide
 
 ---
 
+## Per-user workspace (multi-user runtime)
+
+When `agents.runtime.userWorkspaceEnabled` is `true` and the engine receives a `userId`, it loads SOUL, AGENTS, and MEMORY from `~/.hyperclaw/users/<userId>/` if that directory exists. Otherwise it falls back to the default workspace.
+
+**Use case:** Different users get different agent personality and memory (beyond session-key transcript isolation). Each user can have a custom `~/.hyperclaw/users/alice/` with SOUL.md, AGENTS.md, MEMORY.md.
+
+**Config:**
+```json
+{
+  "agents": {
+    "runtime": { "userWorkspaceEnabled": true }
+  }
+}
+```
+
+The gateway and channel runners must pass `userId` when calling the engine. For channels, this is typically the sender/peer ID from the session key. For web chat with auth, use the authenticated user ID.
+
+---
+
 ## Gateway is the Source of Truth
 
 All session state is owned by the gateway. UI clients (macOS app, WebChat, etc.) must query the gateway for session lists and token counts.

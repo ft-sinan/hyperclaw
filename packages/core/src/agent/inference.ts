@@ -24,6 +24,7 @@ export interface InferenceMessage {
 
 export type ContentBlock =
   | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
   | { type: 'thinking'; thinking: string }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
@@ -322,13 +323,28 @@ export class InferenceEngine {
     });
   }
 
+  private toOpenAIContent(blocks: ContentBlock[]): string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> {
+    const textBlocks = blocks.filter((b: any) => b.type === 'text');
+    const imageBlocks = blocks.filter((b: any) => b.type === 'image' && b.source);
+    const text = textBlocks.map((b: any) => b.text).join('');
+    if (imageBlocks.length === 0) return text || '';
+    const parts: Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }> = [];
+    if (text) parts.push({ type: 'text', text });
+    for (const b of imageBlocks) {
+      const m = (b as any).source.media_type || 'image/png';
+      const d = (b as any).source.data;
+      parts.push({ type: 'image_url', image_url: { url: `data:${m};base64,${d}` } });
+    }
+    return parts;
+  }
+
   private callOpenRouter(messages: InferenceMessage[], _result: InferenceResult): Promise<any> {
     return new Promise((resolve, reject) => {
       // Convert Anthropic-format messages to OpenAI format
       const oaiMessages = messages.map(m => {
         if (m.role === 'user' && Array.isArray(m.content)) {
-          // tool_result blocks → OpenAI tool messages
-          const toolResults = (m.content as ContentBlock[]).filter(b => b.type === 'tool_result');
+          const blocks = m.content as ContentBlock[];
+          const toolResults = blocks.filter(b => b.type === 'tool_result');
           if (toolResults.length > 0) {
             return toolResults.map(b => ({
               role: 'tool' as const,
@@ -336,9 +352,10 @@ export class InferenceEngine {
               content: (b as any).content
             }));
           }
+          const content = this.toOpenAIContent(blocks);
+          return { role: 'user' as const, content };
         }
         if (m.role === 'assistant' && Array.isArray(m.content)) {
-          // Rebuild OpenAI assistant message with tool_calls
           const textBlocks = (m.content as ContentBlock[]).filter(b => b.type === 'text');
           const toolUseBlocks = (m.content as ContentBlock[]).filter(b => b.type === 'tool_use');
           const msg: Record<string, unknown> = { role: 'assistant', content: textBlocks.map((b: any) => b.text).join('') || null };
@@ -353,11 +370,7 @@ export class InferenceEngine {
         }
         return {
           role: m.role === 'tool' ? 'tool' : m.role,
-          content: typeof m.content === 'string' ? m.content :
-            (m.content as ContentBlock[])
-              .filter((b: any) => b.type === 'text')
-              .map((b: any) => b.text)
-              .join('')
+          content: typeof m.content === 'string' ? m.content : this.toOpenAIContent(m.content as ContentBlock[])
         };
       }).flat();
 
@@ -453,11 +466,7 @@ export class InferenceEngine {
     return new Promise((resolve, reject) => {
       const oaiMessages = messages.map(m => ({
         role: m.role === 'tool' ? 'tool' : m.role,
-        content: typeof m.content === 'string' ? m.content :
-          (m.content as ContentBlock[])
-            .filter((b: any) => b.type === 'text')
-            .map((b: any) => b.text)
-            .join('')
+        content: typeof m.content === 'string' ? m.content : this.toOpenAIContent(m.content as ContentBlock[])
       }));
 
       const body: any = {

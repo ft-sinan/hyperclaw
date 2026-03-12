@@ -21,6 +21,7 @@ export interface TgMessage {
   chat: TgChat;
   date: number;
   text?: string;
+  message_thread_id?: number;
   photo?: Array<{ file_id: string; width: number; height: number; }>;
   document?: { file_id: string; file_name?: string; };
   voice?: { file_id: string; duration: number; };
@@ -44,6 +45,7 @@ export interface TgUpdate {
 export interface TgSendOptions {
   parse_mode?: 'Markdown' | 'HTML';
   reply_to_message_id?: number;
+  message_thread_id?: number;
   disable_web_page_preview?: boolean;
 }
 
@@ -230,7 +232,9 @@ export class TelegramConnector extends EventEmitter {
       text: finalText,
       audioBuffer,
       timestamp: new Date(msg.date * 1000).toISOString(),
-      isDM
+      isDM,
+      isGroup,
+      threadId: msg.message_thread_id != null ? String(msg.message_thread_id) : undefined
     });
   }
 
@@ -271,7 +275,8 @@ export class TelegramConnector extends EventEmitter {
         chat_id: chatId, text: chunk,
         parse_mode: opts.parse_mode || 'Markdown',
         disable_web_page_preview: opts.disable_web_page_preview ?? true,
-        ...(opts.reply_to_message_id ? { reply_to_message_id: opts.reply_to_message_id } : {})
+        ...(opts.reply_to_message_id ? { reply_to_message_id: opts.reply_to_message_id } : {}),
+        ...(opts.message_thread_id != null ? { message_thread_id: opts.message_thread_id } : {})
       });
     }
     return last;

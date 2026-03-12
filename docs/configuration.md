@@ -119,6 +119,7 @@ Per-channel config, keyed by channel ID:
 |-----|------|-------------|
 | `defaults.workspace` | string | Workspace root path |
 | `defaults.sandbox.mode` | string | `main` \| `non-main` |
+| `runtime.userWorkspaceEnabled` | boolean | Per-user context isolation. When true and `userId` is passed to the engine, loads SOUL/AGENTS/MEMORY from `~/.hyperclaw/users/<userId>/` if it exists. See [Session Management](session-management.md#per-user-workspace). |
 | `list[].groupChat` | object | Per-agent group chat: `mentionPatterns`, `historyLimit`. See [Group Messages](group-messages.md). |
 | `list[].thinking` | string \| object | Per-agent extended thinking: `off` \| `standard` (8k) \| `extended` (32k) or `{ enabled, budgetTokens }`. API `POST /api/chat` accepts `body.thinking: 'high'|'medium'|'low'|'none'` to override per request. |
 

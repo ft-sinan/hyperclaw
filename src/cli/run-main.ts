@@ -69,7 +69,7 @@ function getGitShortHash(): string {
 
 const cliVersion = (() => {
   const h = getGitShortHash();
-  return h ? `5.4.1+${h}` : '5.4.1';
+  return h ? `5.4.2+${h}` : '5.4.2';
 })();
 
 // H9: Global handlers so unhandled promise rejections log and exit with code 1
@@ -115,6 +115,7 @@ program
     hub, hub search [query], hub install <id>, hub list, hub scan <id>, hub marketplace
     skill search|list|install (alias for hub)
     memory show|add-rule|add-fact|add-image|add-audio|search|search-vector|auto-show|clear|save
+    rag add <path>
     backup create|verify <dir>|restore <dir>
     config show|set-key|set-service-key|schema
     secrets audit|set|apply|reload|remove|credentials
@@ -1043,6 +1044,45 @@ memCmd.command('add-audio <path>')
       });
       await svc.addAudio(audioPath, opts.transcript);
       console.log(chalk.green(`\n  ✓ Audio indexed: ${audioPath}\n`));
+    } catch (e) {
+      console.log(chalk.yellow(`\n  ${(e as Error).message}\n`));
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
+// ─── RAG ─────────────────────────────────────────────────────────────────────
+
+const ragCmd = program.command('rag').description('RAG document ingestion — chunk and index into vector memory');
+ragCmd.command('add <path>')
+  .description('Chunk file and add to vector DB (requires memory-lancedb + OPENAI_API_KEY)')
+  .option('-s, --chunk-size <n>', 'Chunk size', '1000')
+  .option('-o, --overlap <n>', 'Chunk overlap', '200')
+  .action(async (filePath, opts) => {
+    try {
+      const fs = await import('fs-extra');
+      const pathMod = await import('path');
+      const { chunkText } = await import('@hyperclaw/rag');
+      const pkg = '@hyperclaw/memory-lancedb';
+      const mod = await import(pkg as any).catch(() => null);
+      if (!mod?.VectorMemoryService) throw new Error('Install: npm install @hyperclaw/rag @hyperclaw/memory-lancedb vectordb openai');
+      const cfg = await (new ConfigManager()).load();
+      const absPath = pathMod.resolve(filePath);
+      if (!(await fs.pathExists(absPath))) throw new Error(`File not found: ${absPath}`);
+      const content = await fs.readFile(absPath, 'utf8');
+      const size = parseInt(opts.chunkSize, 10) || 1000;
+      const overlap = parseInt(opts.overlap, 10) || 200;
+      const chunks = chunkText(content, { size, overlap });
+      const { getHyperClawDir } = await import('../infra/paths');
+      const svc = new mod.VectorMemoryService({
+        dbPath: pathMod.join(getHyperClawDir(), 'memory-lancedb'),
+        apiKey: cfg?.provider?.apiKey ?? process.env.OPENAI_API_KEY
+      });
+      await svc.init();
+      for (let i = 0; i < chunks.length; i++) {
+        await svc.addMemory(chunks[i], 'rag', `file:${absPath}:chunk:${i}`);
+      }
+      console.log(chalk.green(`\n  ✓ Indexed ${chunks.length} chunks from ${pathMod.basename(absPath)}\n`));
     } catch (e) {
       console.log(chalk.yellow(`\n  ${(e as Error).message}\n`));
       process.exit(1);

@@ -56,7 +56,11 @@ During `session/prompt`, HyperClaw streams:
 
 ## sessions_spawn
 
-The `sessions_spawn` tool allows an agent to spawn child agents for delegation. It is exposed when running in gateway context and is included in `group:sessions`. Gateway support for `spawnChildAgent` is optional; when not available, the tool returns a clear message.
+The `sessions_spawn` tool allows an agent to spawn child agents for delegation. It is exposed when running in gateway context and is included in `group:sessions`. The gateway implements `spawnChildAgent` — returns `{ sessionId, result }` for the child run.
+
+## Image prompts (ACPX)
+
+When `session/prompt` includes image content blocks (`type: 'image'`), HyperClaw converts them to data URIs and injects references so the agent can use the `analyze_image` tool. The agent receives: `[Attached image N — use analyze_image with data URI: data:image/png;base64,...]`.
 
 ## Session Persistence
 

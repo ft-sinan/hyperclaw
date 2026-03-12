@@ -436,6 +436,17 @@ export const PROVIDERS: Provider[] = [
     models: [{ id: '__manual__', name: 'Enter loaded model ID', contextK: 128, flagship: true }],
   },
   {
+    id: 'hyperclaw',
+    displayName: '🦅 HyperClaw (fine-tuned, open-weights)',
+    authType: 'api_key',
+    authLabel: 'API Key (or none for self-hosted)',
+    authHint: 'Open-weights agent model. See docs/FINE_TUNED_MODEL.md. Use custom baseUrl for self-hosted.',
+    models: [
+      { id: 'hyperclaw/agent-v1', name: 'HyperClaw Agent v1 (when released)', contextK: 128, flagship: true },
+      { id: '__manual__', name: 'Enter model ID manually', contextK: 128 },
+    ],
+  },
+  {
     id: 'custom',
     displayName: '🔌 Custom (OpenAI-compatible API)',
     authType: 'api_key',
