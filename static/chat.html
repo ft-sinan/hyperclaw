@@ -432,7 +432,10 @@
       ? chatHistory.filter(c => c.title.toLowerCase().includes(filter.toLowerCase()))
       : chatHistory;
     if (!items.length) { el.innerHTML = '<div style="padding:6px 22px;font-size:11px;color:#3a3a3a">' + (filter ? 'No results' : 'No recent chats') + '</div>'; return; }
-    el.innerHTML = items.map(c => `<button class="sidebar-chat-item" onclick="loadChat('${c.id}')" title="${escHtml(c.title)}">💬 ${escHtml(c.title)}</button>`).join('');
+    el.innerHTML = items.map(c => `<button class="sidebar-chat-item" data-chat-id="${escAttr(c.id)}" title="${escAttr(c.title)}">💬 ${escHtml(c.title)}</button>`).join('');
+    el.querySelectorAll('.sidebar-chat-item').forEach(btn => {
+      btn.onclick = () => loadChat(btn.getAttribute('data-chat-id') || '');
+    });
   }
 
   function loadChat(id) {
@@ -493,7 +496,8 @@
     const btn = document.createElement('button');
     btn.className = 'sidebar-project';
     btn.dataset.preset = proj.id;
-    btn.innerHTML = `<span class="sidebar-project-dot" style="background:${proj.color}"></span>${escHtml(proj.name)}`;
+    const safeColor = /^#[0-9a-fA-F]{3,8}$|^rgb\([^)]+\)$|^rgba\([^)]+\)$/.test(proj.color) ? proj.color : '#6b7280';
+    btn.innerHTML = `<span class="sidebar-project-dot" style="background:${safeColor}"></span>${escHtml(proj.name)}`;
     btn.onclick = () => {
       document.querySelectorAll('.sidebar-project').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -657,7 +661,9 @@
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     if (!streaming && content) {
-      bubble.innerHTML = '<div class="prose">' + (role === 'assistant' ? marked.parse(content) : escHtml(content)) + '</div>';
+      let html = role === 'assistant' ? marked.parse(content) : escHtml(content);
+      html = html.replace(/<script\b[\s\S]*?<\/script>/gi, '').replace(/\s(on\w+|formaction)\s*=\s*["'][^"']*["']/gi, '');
+      bubble.innerHTML = '<div class="prose">' + html + '</div>';
     } else {
       bubble.textContent = content || '';
     }
@@ -696,7 +702,8 @@
     document.getElementById('typing-row')?.remove();
   }
 
-  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // ── Send ─────────────────────────────────────────────
   let msgCount = 0;

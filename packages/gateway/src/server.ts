@@ -581,6 +581,12 @@ export class GatewayServer {
             res.end(JSON.stringify({ error: 'Invalid command' }));
             return;
           }
+          // Block shell metacharacters to prevent command injection (allow quotes for args)
+          if (/[;|&$`\\\n\r]/.test(command)) {
+            res.writeHead(400);
+            res.end(JSON.stringify({ error: 'Invalid command: disallowed characters' }));
+            return;
+          }
 
           const shell = process.platform === 'win32'
             ? (process.env.COMSPEC || 'cmd.exe')

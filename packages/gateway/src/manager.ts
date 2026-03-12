@@ -38,6 +38,7 @@ export class GatewayManager {
   }
 
   async isRunning(port: number): Promise<boolean> {
+    if (typeof port !== 'number' || port < 1 || port > 65535) return false;
     return new Promise(resolve => {
       const socket = new net.Socket();
       socket.setTimeout(500);
