@@ -16,6 +16,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.3.3] — 2026-03-12
+
+### Added
+- **HYPERCLAW banner** — Decorative pixel-style banner displayed at the very top of the chat scroll area in both React Web UI and static HTML UI. The banner adapts its color to the active theme and mode (cyan in normal mode, red in daemon mode) using CSS accent variables.
+- **Voice input** — Microphone button in React Web UI chat header. Uses the browser Web Speech API to transcribe speech directly into the chat input field.
+- **Voice output** — Toggle button in React Web UI chat header. When active, the assistant's response is read aloud via the browser's speech synthesis API after each reply.
+- **Dark / light theme toggle** — Moon/sun button in the sidebar. The selected theme is persisted in `localStorage` and restored on next load.
+- **Claude.ai-style sidebar** — Both React Web UI and static HTML UI now have a sidebar with: New chat, Search (filters chat history), Customize (create custom project agents), Projects section (General, Ethical Hacker, HyperClaw Dev, OSINT presets and user-created custom projects stored in `localStorage`), and Chat history (auto-saved on first message, stored in `localStorage`).
+- **Redesigned terminal panel** — Codex-style terminal in the React Web UI: traffic-light dots, quick-action buttons, monospace output with color-coded lines (cyan for commands, red for errors), auto-focus on open.
+- **CSS variable theme system** — Complete CSS custom property system in `index.css` (React) and `chat.html` (static) supporting four states: dark normal (cyan), light normal (cyan), dark daemon (red), light daemon (red). All colors driven by `--accent`, `--bg`, `--text`, etc. with overrides per `data-theme` and `data-daemon` attributes on `<html>`.
+
+### Fixed
+- **Daemon mode color detection** — `isDaemon` in the React `AppShell` was evaluated as `!!gwStatus?.running`, which is always `true` when the gateway responds (server hardcodes `running: true`). Fixed by: (1) adding `daemonMode: this.config.daemonMode ?? false` to the `/api/status` JSON response in `packages/gateway/src/server.ts`, (2) adding `daemonMode?: boolean` to the `GatewayStatus` TypeScript interface, (3) changing `isDaemon = !!gwStatus?.daemonMode`. The same fix is applied in `static/chat.html` — the `/api/status` fetch now reads `d.daemonMode` and sets `data-daemon` on `<html>`.
+- **`hyperclaw web` path resolution** — Command failed with "React Web UI not found" when run from outside the repo root (e.g. `C:\Windows\system32`). Replaced single-path check with a `findWebDir()` function that tries four strategies: `HYPERCLAW_ROOT` env var, `process.cwd()/apps/web`, walking up to 6 parent directories from `cwd`, and `__dirname`-relative paths. Error message updated to suggest setting `HYPERCLAW_ROOT`.
+
+### Changed
+- Color scheme for daemon mode changed from orange to red across all UIs (React, static HTML, terminal output).
+- Professional gradient backgrounds added to the messages area and sidebar using `radial-gradient` with the active accent color.
+
+---
+
 ## [5.3.2] — 2026-03-11
 
 ### Added

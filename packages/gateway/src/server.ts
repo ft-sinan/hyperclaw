@@ -364,7 +364,7 @@ export class GatewayServer {
 
     if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.3.2' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.3.3' }));
       return;
     }
 
@@ -435,7 +435,8 @@ export class GatewayServer {
         model: cfg?.provider?.modelId || 'unknown',
         agentName: cfg?.identity?.agentName || 'Hyper',
         sessions: this.sessions.size,
-        uptime: this.startedAt ? `${Math.round((Date.now() - new Date(this.startedAt).getTime()) / 1000)}s` : '0s'
+        uptime: this.startedAt ? `${Math.round((Date.now() - new Date(this.startedAt).getTime()) / 1000)}s` : '0s',
+        daemonMode: this.config.daemonMode ?? false
       }));
       return;
     }
@@ -853,7 +854,7 @@ export class GatewayServer {
     if (authToken && !session.authenticated) {
       this.send(session, { type: 'connect.challenge', sessionId: id });
     } else {
-      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.3.2', heartbeatInterval: 30000 });
+      this.send(session, { type: 'connect.ok', sessionId: id, version: '5.3.3', heartbeatInterval: 30000 });
       if (this.config.hooks && this.config.deps.createHookLoader) {
         this.config.deps.createHookLoader().execute('session:start', { sessionId: id }).catch(() => {});
       }

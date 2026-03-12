@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,184 +8,364 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ── ACCENT THEME VARS ── */
     :root {
-      --bg: #090e1a;
-      --bg2: #0d1526;
-      --bg3: #111d33;
-      --border: #1e2d4a;
-      --accent: #00c2ff;
-      --accent2: #0077b6;
-      --text: #e2eaf8;
-      --text2: #8ba0c0;
-      --user-bg: linear-gradient(135deg, #0077b6, #00c2ff);
-      --asst-bg: #111d33;
-      --header-bg: rgba(9,14,26,0.95);
-      --shadow: 0 4px 24px rgba(0,194,255,0.08);
+      --accent:      #22d3ee;
+      --accent2:     #06b6d4;
+      --accent-glow: rgba(34,211,238,0.3);
+      --accent-bg:   rgba(34,211,238,0.08);
     }
     [data-theme="light"] {
-      --bg: #eef4ff;
-      --bg2: #dde8ff;
-      --bg3: #ffffff;
-      --border: #b8cdf0;
-      --accent: #0077b6;
-      --accent2: #005f99;
-      --text: #0d1d3a;
-      --text2: #3a5580;
-      --user-bg: linear-gradient(135deg, #0077b6, #00aee0);
-      --asst-bg: #ffffff;
-      --header-bg: rgba(238,244,255,0.97);
-      --shadow: 0 4px 24px rgba(0,119,182,0.10);
+      --accent:      #0891b2;
+      --accent2:     #0e7490;
+      --accent-glow: rgba(8,145,178,0.25);
+      --accent-bg:   rgba(8,145,178,0.06);
     }
+    [data-daemon="true"] {
+      --accent:      #f87171;
+      --accent2:     #ef4444;
+      --accent-glow: rgba(248,113,113,0.3);
+      --accent-bg:   rgba(248,113,113,0.08);
+    }
+    [data-theme="light"][data-daemon="true"] {
+      --accent:      #dc2626;
+      --accent2:     #b91c1c;
+      --accent-glow: rgba(220,38,38,0.25);
+      --accent-bg:   rgba(220,38,38,0.06);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; transition: background .3s, color .3s; }
+    body { background: #0a0a0a; color: #e5e5e5; font-family: 'Inter', system-ui, sans-serif; height: 100vh; display: flex; overflow: hidden; }
 
-    /* ── BANNER ─── */
-    .banner-wrap { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); background: var(--header-bg); }
-    .banner-logo { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: clamp(18px, 4vw, 28px); letter-spacing: 2px; background: linear-gradient(90deg, var(--accent), #7dd4fc, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: none; line-height: 1; user-select: none; }
-    .banner-eagle { font-size: 28px; filter: drop-shadow(0 0 8px var(--accent)); }
-    .banner-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-    .banner-sub { font-size: 11px; color: var(--text2); letter-spacing: 0.5px; font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .banner-status { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
-    .dot.connected { background: #22c55e; box-shadow: 0 0 6px #22c55e; animation: pulse-green 2s infinite; }
-    @keyframes pulse-green { 0%,100%{box-shadow:0 0 4px #22c55e} 50%{box-shadow:0 0 12px #22c55e} }
-    .banner-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-    .btn-icon { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all .2s; }
-    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
 
-    /* ── MESSAGES ─── */
-    #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
-    #messages::-webkit-scrollbar { width: 4px; }
-    #messages::-webkit-scrollbar-track { background: transparent; }
-    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .msg-row { display: flex; gap: 10px; max-width: 800px; animation: fadeIn .25s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    /* ── SIDEBAR ── */
+    #sidebar { width: 240px; flex-shrink: 0; background: #111111; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; height: 100vh; overflow: hidden; transition: width 0.2s; }
+    #sidebar.collapsed { width: 0; border: none; }
+
+    .sidebar-top { padding: 14px 12px 8px; flex-shrink: 0; }
+    .sidebar-logo { display: flex; align-items: center; gap: 9px; padding: 6px 8px; margin-bottom: 6px; }
+    .sidebar-logo img { width: 26px; height: 26px; border-radius: 6px; }
+    .sidebar-logo-text { font-size: 13px; font-weight: 600; color: #e5e5e5; }
+
+    .sidebar-btn { width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; border: none; background: transparent; color: #a3a3a3; font-size: 13px; cursor: pointer; transition: background .15s, color .15s; text-align: left; white-space: nowrap; overflow: hidden; }
+    .sidebar-btn:hover { background: #1e1e1e; color: #e5e5e5; }
+    .sidebar-btn.active { background: #1e1e1e; color: #e5e5e5; }
+    .sidebar-btn svg { flex-shrink: 0; }
+
+    .sidebar-new-chat { width: calc(100% - 24px); margin: 0 12px 4px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid #2a2a2a; background: transparent; color: #e5e5e5; font-size: 13px; cursor: pointer; transition: background .15s, border-color .15s; font-family: inherit; }
+    .sidebar-new-chat:hover { background: #1e1e1e; border-color: #3a3a3a; }
+
+    .sidebar-search { margin: 4px 12px; position: relative; }
+    .sidebar-search input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 7px 10px 7px 32px; font-size: 12px; color: #e5e5e5; outline: none; font-family: inherit; transition: border-color .15s; }
+    .sidebar-search input:focus { border-color: #3a3a3a; }
+    .sidebar-search input::placeholder { color: #555; }
+    .sidebar-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #555; pointer-events: none; }
+
+    .sidebar-section { padding: 16px 12px 4px; font-size: 11px; font-weight: 500; color: #555; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .sidebar-project { width: calc(100% - 24px); margin: 0 12px 2px; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; border: none; background: transparent; color: #a3a3a3; font-size: 12px; cursor: pointer; transition: background .15s, color .15s; text-align: left; font-family: inherit; overflow: hidden; }
+    .sidebar-project:hover { background: #1e1e1e; color: #e5e5e5; }
+    .sidebar-project.active { background: #1e1e1e; color: #e5e5e5; }
+    .sidebar-project-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    .sidebar-chat-item { width: calc(100% - 24px); margin: 0 12px 1px; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; border: none; background: transparent; color: #777; font-size: 12px; cursor: pointer; transition: background .15s, color .15s; text-align: left; font-family: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sidebar-chat-item:hover { background: #1a1a1a; color: #ccc; }
+
+    .sidebar-history { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+
+    .sidebar-bottom { padding: 8px 12px 12px; border-top: 1px solid #1e1e1e; flex-shrink: 0; }
+
+    /* ── MAIN ── */
+    #main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; background: #0a0a0a; }
+
+    /* ── HEADER ── */
+    .chat-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #1e1e1e; background: #0a0a0a; flex-shrink: 0; gap: 8px; }
+    .chat-header-left { display: flex; align-items: center; gap: 8px; }
+    .sidebar-toggle { background: transparent; border: none; color: #555; cursor: pointer; padding: 4px; border-radius: 6px; display: flex; transition: color .15s, background .15s; }
+    .sidebar-toggle:hover { color: #ccc; background: #1e1e1e; }
+    .chat-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .header-status { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #555; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
+    .dot.connected { background: #22c55e; box-shadow: 0 0 5px #22c55e; animation: pulse-g 2s infinite; }
+    @keyframes pulse-g { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .hdr-btn { background: transparent; border: 1px solid #2a2a2a; color: #777; padding: 5px 10px; border-radius: 7px; font-size: 11px; cursor: pointer; font-family: inherit; transition: background .15s, color .15s, border-color .15s; white-space: nowrap; }
+    .hdr-btn:hover { background: #1e1e1e; color: #ccc; border-color: #3a3a3a; }
+    .hdr-btn.active { background: #2a1a1a; border-color: #5a2a2a; color: #f87171; }
+    .hdr-select { background: #111; border: 1px solid #2a2a2a; color: #ccc; padding: 5px 8px; border-radius: 7px; font-size: 11px; cursor: pointer; font-family: inherit; outline: none; }
+
+    /* ── MESSAGES ── */
+    #messages { flex: 1; overflow-y: auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; min-height: 0; }
+    .msg-row { display: flex; gap: 10px; max-width: 720px; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
     .msg-row.user { flex-direction: row-reverse; align-self: flex-end; }
     .msg-row.assistant { align-self: flex-start; }
-    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; border: 1px solid var(--border); background: var(--bg3); }
-    .msg-bubble { max-width: min(70vw, 560px); padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
-    .msg-row.user .msg-bubble { background: var(--user-bg); color: #fff; border-bottom-right-radius: 4px; }
-    .msg-row.assistant .msg-bubble { background: var(--asst-bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text); }
-    .msg-bubble .prose h1,.msg-bubble .prose h2,.msg-bubble .prose h3 { color: var(--accent); margin: 8px 0 4px; font-size: 1em; font-weight: 600; }
+    .msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: #1a1a1a; border: 1px solid #2a2a2a; margin-top: 2px; }
+    .msg-bubble { max-width: min(65vw, 560px); padding: 11px 15px; border-radius: 16px; font-size: 13.5px; line-height: 1.65; }
+    .msg-row.user .msg-bubble { background: #c0392b; color: #fff; border-bottom-right-radius: 4px; }
+    .msg-row.assistant .msg-bubble { background: #141414; border: 1px solid #222; border-bottom-left-radius: 4px; color: #ddd; }
+    .msg-bubble .prose h1,.msg-bubble .prose h2,.msg-bubble .prose h3 { color: #f87171; margin: 8px 0 4px; font-weight: 600; }
     .msg-bubble .prose p { margin: 4px 0; }
-    .msg-bubble .prose pre { background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; font-size: 12px; }
-    .msg-bubble .prose code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--accent); }
-    .msg-bubble .prose pre code { background: none; padding: 0; color: var(--text); }
+    .msg-bubble .prose pre { background: #0d0d0d; border: 1px solid #222; padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; font-size: 12px; }
+    .msg-bubble .prose code { background: #0d0d0d; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #f87171; }
+    .msg-bubble .prose pre code { background: none; padding: 0; color: #ccc; }
     .msg-bubble .prose ul,.msg-bubble .prose ol { padding-left: 18px; margin: 4px 0; }
-    .msg-bubble .prose a { color: var(--accent); text-decoration: underline; }
-    .msg-time { font-size: 10px; color: var(--text2); margin-top: 4px; text-align: right; }
-    .msg-row.assistant .msg-time { text-align: left; }
+    .msg-bubble .prose a { color: #60a5fa; text-decoration: underline; }
+    .msg-time { font-size: 10px; color: #444; margin-top: 4px; }
+    .msg-row.user .msg-time { text-align: right; }
 
-    /* ── TYPING ─── */
-    .typing-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: blink 1.3s infinite; }
-    .typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+    /* ── TYPING ── */
+    .typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f87171; animation: blink 1.2s infinite; }
+    .typing-dot:nth-child(2){animation-delay:.18s}.typing-dot:nth-child(3){animation-delay:.36s}
     @keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
 
-    /* ── INPUT ─── */
-    .input-wrap { padding: 12px 20px 16px; border-top: 1px solid var(--border); background: var(--header-bg); backdrop-filter: blur(8px); }
-    .input-row { display: flex; gap: 10px; align-items: flex-end; max-width: 800px; margin: 0 auto; }
-    #input { flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 14px; padding: 12px 16px; font-size: 14px; font-family: 'Inter', sans-serif; resize: none; min-height: 46px; max-height: 120px; outline: none; transition: border .2s, box-shadow .2s; line-height: 1.5; }
-    #input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 15%, transparent); }
-    #input::placeholder { color: var(--text2); }
-    #send-btn { width: 46px; height: 46px; border-radius: 14px; background: var(--accent); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .2s; flex-shrink: 0; }
-    #send-btn:hover:not(:disabled) { background: var(--accent2); transform: scale(1.05); }
-    #send-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
-    .input-hint { font-size: 11px; color: var(--text2); text-align: center; margin-top: 6px; }
+    /* ── BANNER ── */
+    .hc-banner { display: flex; flex-direction: column; align-items: center; padding: 24px 0 16px; flex-shrink: 0; pointer-events: none; user-select: none; opacity: 0.45; }
+    .hc-banner-text { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 2.4rem; letter-spacing: 0.3em; color: var(--accent); text-shadow: 0 0 32px var(--accent), 0 0 64px var(--accent-bg); line-height: 1; }
+    .hc-banner-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.25em; margin-top: 8px; opacity: 0.75; }
 
-    /* ── WELCOME ─── */
-    .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 12px; text-align: center; padding: 32px; }
-    .welcome-logo { font-family: 'JetBrains Mono', monospace; font-size: clamp(32px, 8vw, 64px); font-weight: 700; letter-spacing: 4px; background: linear-gradient(135deg, #7dd4fc, var(--accent), #0077b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1; }
-    .welcome-sub { font-size: 14px; color: var(--text2); max-width: 380px; line-height: 1.6; }
+    /* ── WELCOME ── */
+    .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 14px; text-align: center; padding: 40px; }
+    .welcome-eagle { font-size: 48px; margin-bottom: 4px; filter: drop-shadow(0 0 12px rgba(239,68,68,0.3)); }
+    .welcome-title { font-size: 26px; font-weight: 600; color: #e5e5e5; }
+    .welcome-sub { font-size: 13px; color: #666; max-width: 360px; line-height: 1.6; }
     .welcome-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px; }
-    .chip { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 7px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .2s; }
-    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip { background: #141414; border: 1px solid #2a2a2a; color: #888; padding: 7px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .2s; font-family: inherit; }
+    .chip:hover { border-color: #555; color: #ccc; background: #1e1e1e; }
 
-    /* ── LOCAL TERMINAL ─── */
-    .terminal-wrap { border-top: 1px solid var(--border); background: rgba(0,0,0,0.4); flex-shrink: 0; }
-    .terminal-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; font-size: 12px; color: var(--text2); background: transparent; border: none; cursor: pointer; transition: background .2s; }
-    .terminal-toggle:hover { background: var(--bg3); }
-    .terminal-body { padding: 12px 16px; display: none; }
-    .terminal-body.open { display: block; }
-    .terminal-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-    .terminal-btn { padding: 6px 12px; font-size: 11px; border-radius: 6px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); cursor: pointer; transition: all .2s; }
-    .terminal-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-    .terminal-btn:disabled { opacity: 0.5; cursor: default; }
-    .terminal-log { background: rgba(0,0,0,0.7); border: 1px solid var(--border); border-radius: 8px; padding: 10px; height: 140px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text2); white-space: pre-wrap; margin-bottom: 10px; }
-    .terminal-log:empty::before { content: 'No commands yet. Use the buttons above or type a command below.'; color: var(--text2); opacity: 0.7; }
-    .terminal-input-row { display: flex; gap: 8px; align-items: center; }
-    .terminal-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text); outline: none; }
-    .terminal-input:focus { border-color: var(--accent); }
+    /* ── INPUT ── */
+    .input-wrap { padding: 12px 16px 14px; border-top: 1px solid #1a1a1a; background: #0a0a0a; flex-shrink: 0; }
+    .input-row { display: flex; gap: 8px; align-items: flex-end; max-width: 720px; margin: 0 auto; }
+    #input { flex: 1; background: #141414; border: 1px solid #2a2a2a; color: #e5e5e5; border-radius: 12px; padding: 11px 14px; font-size: 13.5px; font-family: 'Inter', sans-serif; resize: none; min-height: 44px; max-height: 130px; outline: none; transition: border-color .2s; line-height: 1.5; }
+    #input:focus { border-color: #3a3a3a; }
+    #input::placeholder { color: #444; }
+    #send-btn { width: 40px; height: 40px; border-radius: 10px; background: #c0392b; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+    #send-btn:hover:not(:disabled) { background: #e74c3c; }
+    #send-btn:disabled { opacity: 0.3; cursor: default; }
+    .input-hint { font-size: 11px; color: #333; text-align: center; margin-top: 6px; max-width: 720px; margin-left: auto; margin-right: auto; }
+
+    /* ── TERMINAL PANEL ── */
+    #terminal-panel { border-top: 1px solid #1e1e1e; background: #0d0d0d; flex-shrink: 0; height: 220px; display: none; flex-direction: column; }
+    #terminal-panel.open { display: flex; }
+    .term-titlebar { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; background: #141414; border-bottom: 1px solid #1e1e1e; flex-shrink: 0; }
+    .term-dots { display: flex; gap: 5px; }
+    .term-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .term-info { font-size: 11px; color: #444; font-family: 'JetBrains Mono', monospace; flex: 1; text-align: center; }
+    .term-titlebar-right { display: flex; align-items: center; gap: 10px; }
+    .term-clear-btn { font-size: 11px; color: #444; background: none; border: none; cursor: pointer; font-family: inherit; transition: color .15s; }
+    .term-clear-btn:hover { color: #888; }
+    .term-close-btn { background: none; border: none; color: #444; cursor: pointer; display: flex; transition: color .15s; }
+    .term-close-btn:hover { color: #ccc; }
+    .term-quick { display: flex; gap: 6px; padding: 6px 12px; border-bottom: 1px solid #191919; flex-shrink: 0; overflow-x: auto; }
+    .term-quick::-webkit-scrollbar { height: 0; }
+    .term-quick-btn { padding: 4px 10px; border-radius: 6px; background: #1a1a1a; border: 1px solid #2a2a2a; color: #777; font-size: 11px; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all .15s; white-space: nowrap; flex-shrink: 0; }
+    .term-quick-btn:hover:not(:disabled) { background: #222; color: #ccc; border-color: #3a3a3a; }
+    .term-quick-btn:disabled { opacity: 0.4; cursor: default; }
+    #terminal-log { flex: 1; overflow-y: auto; padding: 8px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #888; white-space: pre-wrap; line-height: 1.5; min-height: 0; }
+    .term-log-cmd { color: #67e8f9; }
+    .term-log-err { color: #f87171; }
+    .term-input-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px 8px; border-top: 1px solid #1a1a1a; background: #141414; flex-shrink: 0; }
+    .term-prompt { color: #67e8f9; font-family: 'JetBrains Mono', monospace; font-size: 12px; flex-shrink: 0; }
+    #terminal-input { flex: 1; background: transparent; border: none; color: #e5e5e5; font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none; }
+    #terminal-input::placeholder { color: #333; }
+    .term-spinner { width: 12px; height: 12px; border: 1.5px solid #d97706; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── CUSTOMIZE MODAL ── */
+    #customize-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    #customize-modal.open { display: flex; }
+    .modal-box { background: #141414; border: 1px solid #2a2a2a; border-radius: 14px; padding: 24px; width: 400px; max-width: 90vw; }
+    .modal-title { font-size: 15px; font-weight: 600; color: #e5e5e5; margin-bottom: 16px; }
+    .modal-label { font-size: 12px; color: #777; margin-bottom: 4px; display: block; }
+    .modal-input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 12px; color: #e5e5e5; font-size: 13px; font-family: inherit; outline: none; margin-bottom: 12px; transition: border-color .15s; }
+    .modal-input:focus { border-color: #3a3a3a; }
+    .modal-textarea { min-height: 80px; resize: vertical; }
+    .modal-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+    .modal-btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: inherit; border: 1px solid #2a2a2a; transition: all .15s; }
+    .modal-btn-cancel { background: transparent; color: #777; }
+    .modal-btn-cancel:hover { background: #1e1e1e; color: #ccc; }
+    .modal-btn-save { background: #c0392b; border-color: #c0392b; color: #fff; }
+    .modal-btn-save:hover { background: #e74c3c; border-color: #e74c3c; }
   </style>
 </head>
 <body>
 
-<!-- HEADER BANNER -->
-<header class="banner-wrap">
-  <span class="banner-eagle">🦅</span>
-  <div style="display:flex;flex-direction:column;gap:1px">
-    <div class="banner-logo">HYPERCLAW</div>
-    <div class="banner-sub" id="agent-sub">AI Gateway Platform · Connecting…</div>
-  </div>
-  <div style="flex:1"></div>
-  <div class="banner-status">
-    <span class="dot" id="ws-dot"></span>
-    <span id="ws-label" style="color:var(--text2);font-size:13px">Offline</span>
-  </div>
-  <div class="banner-actions" style="display:flex;align-items:center;gap:8px">
-    <select id="prompt-select" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer">
-      <option value="">General</option>
-      <option value="ethical-hacker">Ethical Hacker</option>
-      <option value="hyperclaw">HyperClaw Dev</option>
-      <option value="osint">OSINT</option>
-    </select>
-    <button class="btn-icon" id="new-chat-btn" title="New chat">💬</button>
-    <button class="btn-icon" id="clear-btn" title="Clear messages">🗑️</button>
-    <button class="btn-icon" id="theme-btn" title="Toggle theme">🌙</button>
-  </div>
-</header>
+<!-- ── SIDEBAR ── -->
+<aside id="sidebar">
+  <div class="sidebar-top">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <span style="font-size:22px">🦅</span>
+      <span class="sidebar-logo-text">HyperClaw</span>
+    </div>
 
-<!-- MESSAGES -->
-<main id="messages">
-  <div class="welcome" id="welcome">
-    <div class="welcome-logo">HYPERCLAW</div>
-    <p class="welcome-sub">Your personal AI assistant — running on your hardware. Ask anything or pick a suggestion:</p>
-    <div class="welcome-chips">
-      <span class="chip" onclick="fillInput(this)">What can you do?</span>
-      <span class="chip" onclick="fillInput(this)">What's the weather today?</span>
-      <span class="chip" onclick="fillInput(this)">Search the web for AI news</span>
-      <span class="chip" onclick="fillInput(this)">Help me write a script</span>
-      <span class="chip" onclick="fillInput(this)">Show system status</span>
+    <!-- New chat -->
+    <button class="sidebar-new-chat" id="new-chat-btn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      New chat
+    </button>
+
+    <!-- Search -->
+    <div class="sidebar-search" style="margin-top:6px">
+      <svg class="sidebar-search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M9 9l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <input type="text" id="search-input" placeholder="Search chats…" autocomplete="off">
     </div>
   </div>
-</main>
 
-<!-- INPUT -->
-<div class="input-wrap">
-  <form class="input-row" id="form">
-    <textarea id="input" rows="1" placeholder="Your AI assistant awaits — type a message and press Enter to send · HyperClaw" autocomplete="off"></textarea>
-    <button type="submit" id="send-btn">↑</button>
-  </form>
-  <div class="input-hint">🦅 HyperClaw · <span id="model-hint">—</span></div>
+  <!-- Customize -->
+  <button class="sidebar-btn" id="customize-btn" style="margin: 2px 12px; width: calc(100% - 24px)">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.5 2.5l1.1 1.1M10.4 10.4l1.1 1.1M2.5 11.5l1.1-1.1M10.4 3.6l1.1-1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Customize
+  </button>
+
+  <!-- Projects section -->
+  <div class="sidebar-section">Projects</div>
+  <div id="projects-list">
+    <button class="sidebar-project active" data-preset="" id="proj-general">
+      <span class="sidebar-project-dot" style="background:#6b7280"></span>
+      General
+    </button>
+    <button class="sidebar-project" data-preset="ethical-hacker" id="proj-hacker">
+      <span class="sidebar-project-dot" style="background:#ef4444"></span>
+      Ethical Hacker
+    </button>
+    <button class="sidebar-project" data-preset="hyperclaw" id="proj-hcdev">
+      <span class="sidebar-project-dot" style="background:#f97316"></span>
+      HyperClaw Dev
+    </button>
+    <button class="sidebar-project" data-preset="osint" id="proj-osint">
+      <span class="sidebar-project-dot" style="background:#a855f7"></span>
+      OSINT
+    </button>
+    <button class="sidebar-project" id="new-project-btn" style="color:#555">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      New project…
+    </button>
+  </div>
+
+  <!-- Chats history -->
+  <div class="sidebar-section">Chats</div>
+  <div class="sidebar-history" id="chat-history">
+    <div style="padding: 6px 22px; font-size:11px; color:#3a3a3a">No recent chats</div>
+  </div>
+
+  <!-- Bottom: status -->
+  <div class="sidebar-bottom">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="dot" id="ws-dot-side"></span>
+      <span id="ws-label-side" style="font-size:11px;color:#444">Offline</span>
+    </div>
+    <div id="model-label" style="font-size:11px;color:#333;margin-top:2px;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+  </div>
+</aside>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- Header -->
+  <header class="chat-header">
+    <div class="chat-header-left">
+      <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="1.3" rx=".65" fill="currentColor"/><rect x="2" y="7.35" width="12" height="1.3" rx=".65" fill="currentColor"/><rect x="2" y="10.7" width="12" height="1.3" rx=".65" fill="currentColor"/></svg>
+      </button>
+      <span style="font-size:13px;color:#555;font-weight:500" id="active-project-label">General</span>
+    </div>
+    <div class="chat-header-right">
+      <div class="header-status">
+        <span class="dot" id="ws-dot"></span>
+        <span id="ws-label" style="font-size:12px;color:#444">Offline</span>
+      </div>
+      <button class="hdr-btn" id="clear-btn">Clear</button>
+      <button class="hdr-btn" id="terminal-btn">
+        <span style="display:inline-flex;align-items:center;gap:5px">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 2.5L5 6L1.5 9.5M6.5 9.5H10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Terminal
+        </span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <main id="messages">
+    <!-- Banner -->
+    <div class="hc-banner">
+      <div class="hc-banner-text">HYPERCLAW</div>
+      <div class="hc-banner-sub" id="banner-sub">HyperClaw Bot  ·  AI Gateway  v5.3.3</div>
+    </div>
+    <div class="welcome" id="welcome">
+      <div class="welcome-eagle">🦅</div>
+      <div class="welcome-title">What can I help with?</div>
+      <p class="welcome-sub">Your personal AI agent — running on your hardware. Pick a suggestion or type anything.</p>
+      <div class="welcome-chips">
+        <button class="chip" onclick="fillInput(this)">What can you do?</button>
+        <button class="chip" onclick="fillInput(this)">Search the web for AI news</button>
+        <button class="chip" onclick="fillInput(this)">Help me write a script</button>
+        <button class="chip" onclick="fillInput(this)">Show system status</button>
+        <button class="chip" onclick="fillInput(this)">Run a security audit</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Input -->
+  <div class="input-wrap">
+    <form class="input-row" id="form">
+      <textarea id="input" rows="1" placeholder="Ask HyperClaw anything… Enter to send, Shift+Enter for new line" autocomplete="off"></textarea>
+      <button type="submit" id="send-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
+    <div class="input-hint">🦅 HyperClaw · <span id="model-hint">—</span> · Shift+Enter for new line</div>
+  </div>
+
+  <!-- Terminal panel -->
+  <div id="terminal-panel">
+    <div class="term-titlebar">
+      <div class="term-dots">
+        <div class="term-dot" style="background:#ff5f57"></div>
+        <div class="term-dot" style="background:#febc2e"></div>
+        <div class="term-dot" style="background:#28c840"></div>
+      </div>
+      <span class="term-info" id="term-prompt-info">Terminal — HyperClaw gateway</span>
+      <div class="term-titlebar-right">
+        <button class="term-clear-btn" id="term-clear-btn">clear</button>
+        <button class="term-close-btn" id="term-close-btn" title="Close terminal">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 1.5l10 10M11.5 1.5l-10 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="term-quick">
+      <button class="term-quick-btn" data-cmd="npm install">npm install</button>
+      <button class="term-quick-btn" data-cmd="npm run build">npm run build</button>
+      <button class="term-quick-btn" data-cmd="npm test">npm test</button>
+      <button class="term-quick-btn" data-cmd="npx hyperclaw doctor --fix">doctor --fix</button>
+      <button class="term-quick-btn" data-cmd="npx hyperclaw gateway status">gateway status</button>
+    </div>
+    <div id="terminal-log"><span style="color:#333">Use the quick buttons above or type a command below.</span></div>
+    <div class="term-input-row">
+      <span class="term-prompt">›</span>
+      <input type="text" id="terminal-input" placeholder="Run a command…">
+      <div class="term-spinner" id="term-spinner"></div>
+    </div>
+  </div>
+
 </div>
 
-<!-- LOCAL TERMINAL -->
-<div class="terminal-wrap">
-  <button type="button" class="terminal-toggle" id="terminal-toggle">
-    <span>› Local terminal</span>
-    <span id="terminal-toggle-label">Show</span>
-  </button>
-  <div class="terminal-body" id="terminal-body">
-    <div class="terminal-btns">
-      <button type="button" class="terminal-btn" data-cmd="npm run build">Build</button>
-      <button type="button" class="terminal-btn" data-cmd="npm install">Install</button>
-      <button type="button" class="terminal-btn" data-cmd="npm test">Test</button>
-      <button type="button" class="terminal-btn" data-cmd="npx hyperclaw doctor --fix">Doctor</button>
-      <button type="button" class="terminal-btn" data-cmd="npx hyperclaw gateway status">Gateway status</button>
-    </div>
-    <div class="terminal-log" id="terminal-log"></div>
-    <div class="terminal-input-row">
-      <input type="text" class="terminal-input" id="terminal-input" placeholder="Run a command in your HyperClaw workspace..." />
-      <button type="button" class="terminal-btn" id="terminal-run">Run</button>
+<!-- ── CUSTOMIZE MODAL ── -->
+<div id="customize-modal">
+  <div class="modal-box">
+    <div class="modal-title">✦ New Project / Agent</div>
+    <label class="modal-label">Project name</label>
+    <input type="text" class="modal-input" id="modal-name" placeholder="e.g. Bug Hunter">
+    <label class="modal-label">System prompt</label>
+    <textarea class="modal-input modal-textarea" id="modal-prompt" placeholder="e.g. You are a security researcher. Focus on vulnerabilities and exploits."></textarea>
+    <label class="modal-label">Color</label>
+    <input type="color" class="modal-input" id="modal-color" value="#6b7280" style="height:36px;padding:2px 6px;cursor:pointer">
+    <div class="modal-row">
+      <button class="modal-btn modal-btn-cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-btn modal-btn-save" id="modal-save">Create project</button>
     </div>
   </div>
 </div>
@@ -196,70 +376,244 @@
   const apiUrl = `http://${location.hostname}:${port}`;
 
   let ws = null, isStreaming = false, currentBubble = null;
+  let activePreset = '';
+  let customProjects = JSON.parse(localStorage.getItem('hc_projects') || '[]');
+  let chatHistory = JSON.parse(localStorage.getItem('hc_history') || '[]');
+  let currentChatId = Date.now().toString();
+  let currentChatMessages = [];
+
   const messagesEl = document.getElementById('messages');
   const welcomeEl  = document.getElementById('welcome');
-  const wsDot      = document.getElementById('ws-dot');
-  const wsLabel    = document.getElementById('ws-label');
-  const agentSub   = document.getElementById('agent-sub');
-  const modelHint  = document.getElementById('model-hint');
   const input      = document.getElementById('input');
   const sendBtn    = document.getElementById('send-btn');
   const form       = document.getElementById('form');
 
-  // ── Theme ────────────────────────────────────────────
-  const themeBtn = document.getElementById('theme-btn');
-  let dark = true;
-  themeBtn.onclick = () => {
-    dark = !dark;
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    themeBtn.textContent = dark ? '🌙' : '☀️';
-  };
-
-  // ── New chat / Clear ─────────────────────────────────
-  const promptSelect = document.getElementById('prompt-select');
   const PROMPT_PREFIX = {
     'ethical-hacker': 'Act as an ethical hacker / security researcher. Authorized testing only. ',
     'hyperclaw': 'You are helping with HyperClaw development. Be concise and code-focused. ',
     'osint': 'Act as an OSINT analyst. Passive reconnaissance, open-source research. '
   };
-  document.getElementById('new-chat-btn').onclick = () => {
-    messagesEl.querySelectorAll('.msg-row').forEach(e => e.remove());
-    welcomeEl.style.display = 'flex';
-  };
-  document.getElementById('clear-btn').onclick = () => {
-    messagesEl.querySelectorAll('.msg-row').forEach(e => e.remove());
-    welcomeEl.style.display = 'flex';
+
+  // ── Sidebar toggle ───────────────────────────────────
+  document.getElementById('sidebar-toggle').onclick = () => {
+    document.getElementById('sidebar').classList.toggle('collapsed');
   };
 
-  // ── Chips ────────────────────────────────────────────
-  function fillInput(el) {
-    input.value = el.textContent;
-    input.focus();
-    autoResize();
+  // ── Project switching ────────────────────────────────
+  function setActiveProject(preset, name, dotColor) {
+    activePreset = preset;
+    document.querySelectorAll('.sidebar-project').forEach(b => b.classList.remove('active'));
+    document.getElementById('active-project-label').textContent = name || 'General';
   }
+
+  document.querySelectorAll('.sidebar-project[data-preset]').forEach(btn => {
+    btn.onclick = () => {
+      const names = { '': 'General', 'ethical-hacker': 'Ethical Hacker', 'hyperclaw': 'HyperClaw Dev', 'osint': 'OSINT' };
+      document.querySelectorAll('.sidebar-project').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      setActiveProject(btn.dataset.preset, names[btn.dataset.preset]);
+    };
+  });
+
+  // ── Chat history ─────────────────────────────────────
+  function saveCurrentChat(firstMsg) {
+    if (!firstMsg) return;
+    const existing = chatHistory.find(c => c.id === currentChatId);
+    if (existing) { existing.title = firstMsg.slice(0, 40); }
+    else { chatHistory.unshift({ id: currentChatId, title: firstMsg.slice(0, 40), ts: Date.now() }); }
+    if (chatHistory.length > 30) chatHistory = chatHistory.slice(0, 30);
+    localStorage.setItem('hc_history', JSON.stringify(chatHistory));
+    renderHistory();
+  }
+
+  function renderHistory(filter) {
+    const el = document.getElementById('chat-history');
+    const items = filter
+      ? chatHistory.filter(c => c.title.toLowerCase().includes(filter.toLowerCase()))
+      : chatHistory;
+    if (!items.length) { el.innerHTML = '<div style="padding:6px 22px;font-size:11px;color:#3a3a3a">' + (filter ? 'No results' : 'No recent chats') + '</div>'; return; }
+    el.innerHTML = items.map(c => `<button class="sidebar-chat-item" onclick="loadChat('${c.id}')" title="${escHtml(c.title)}">💬 ${escHtml(c.title)}</button>`).join('');
+  }
+
+  function loadChat(id) {
+    // For now just label it — full persistence would require storing messages
+    const chat = chatHistory.find(c => c.id === id);
+    if (chat) document.getElementById('active-project-label').textContent = chat.title.slice(0,20) + '…';
+  }
+
+  renderHistory();
+
+  // Search chats
+  document.getElementById('search-input').oninput = function() { renderHistory(this.value); };
+
+  // ── New chat ─────────────────────────────────────────
+  document.getElementById('new-chat-btn').onclick = startNewChat;
+  document.getElementById('clear-btn').onclick = () => { clearMessages(); };
+
+  function startNewChat() {
+    currentChatId = Date.now().toString();
+    currentChatMessages = [];
+    clearMessages();
+  }
+
+  function clearMessages() {
+    messagesEl.querySelectorAll('.msg-row').forEach(e => e.remove());
+    welcomeEl.style.display = 'flex';
+  }
+
+  // ── Customize modal ──────────────────────────────────
+  document.getElementById('customize-btn').onclick = () => {
+    document.getElementById('customize-modal').classList.add('open');
+    document.getElementById('modal-name').focus();
+  };
+  document.getElementById('new-project-btn').onclick = () => {
+    document.getElementById('customize-modal').classList.add('open');
+    document.getElementById('modal-name').focus();
+  };
+  document.getElementById('modal-cancel').onclick = () => document.getElementById('customize-modal').classList.remove('open');
+  document.getElementById('customize-modal').onclick = (e) => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); };
+
+  document.getElementById('modal-save').onclick = () => {
+    const name = document.getElementById('modal-name').value.trim();
+    const prompt = document.getElementById('modal-prompt').value.trim();
+    const color = document.getElementById('modal-color').value;
+    if (!name) return;
+    const id = 'custom-' + Date.now();
+    customProjects.push({ id, name, prompt, color });
+    localStorage.setItem('hc_projects', JSON.stringify(customProjects));
+    PROMPT_PREFIX[id] = prompt + ' ';
+    addProjectToSidebar({ id, name, color });
+    document.getElementById('customize-modal').classList.remove('open');
+    document.getElementById('modal-name').value = '';
+    document.getElementById('modal-prompt').value = '';
+    document.getElementById('modal-color').value = '#6b7280';
+  };
+
+  function addProjectToSidebar(proj) {
+    const btn = document.createElement('button');
+    btn.className = 'sidebar-project';
+    btn.dataset.preset = proj.id;
+    btn.innerHTML = `<span class="sidebar-project-dot" style="background:${proj.color}"></span>${escHtml(proj.name)}`;
+    btn.onclick = () => {
+      document.querySelectorAll('.sidebar-project').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      setActiveProject(proj.id, proj.name);
+    };
+    document.getElementById('new-project-btn').before(btn);
+  }
+
+  // Restore custom projects
+  customProjects.forEach(proj => {
+    PROMPT_PREFIX[proj.id] = proj.prompt + ' ';
+    addProjectToSidebar(proj);
+  });
+
+  // ── Terminal ─────────────────────────────────────────
+  const terminalPanel = document.getElementById('terminal-panel');
+  const terminalBtn = document.getElementById('terminal-btn');
+  const terminalLog = document.getElementById('terminal-log');
+  const terminalInput = document.getElementById('terminal-input');
+  const termSpinner = document.getElementById('term-spinner');
+  let termRunning = false;
+
+  terminalBtn.onclick = toggleTerminal;
+  document.getElementById('term-close-btn').onclick = () => {
+    terminalPanel.classList.remove('open');
+    terminalBtn.classList.remove('active');
+  };
+  document.getElementById('term-clear-btn').onclick = () => {
+    terminalLog.innerHTML = '<span style="color:#333">Terminal cleared.</span>';
+  };
+
+  function toggleTerminal() {
+    const isOpen = terminalPanel.classList.toggle('open');
+    terminalBtn.classList.toggle('active', isOpen);
+    if (isOpen) setTimeout(() => terminalInput.focus(), 50);
+  }
+
+  async function runTerminalCmd(cmd) {
+    cmd = (cmd || '').trim();
+    if (!cmd || termRunning) return;
+    termRunning = true;
+    termSpinner.style.display = 'block';
+    document.querySelectorAll('.term-quick-btn').forEach(b => b.disabled = true);
+
+    const cmdLine = document.createElement('div');
+    cmdLine.className = 'term-log-cmd';
+    cmdLine.textContent = '$ ' + cmd;
+    if (terminalLog.querySelector('span')) terminalLog.innerHTML = '';
+    terminalLog.appendChild(cmdLine);
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+
+    try {
+      const res = await fetch(apiUrl + '/api/terminal', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({command: cmd})
+      });
+      const data = await res.json();
+      if (data.user || data.cwd) {
+        document.getElementById('term-prompt-info').textContent = `${data.user || 'user'}@${data.hostname || 'local'}:${data.cwd || ''}`;
+      }
+      if (data.stdout) {
+        const out = document.createElement('div');
+        out.textContent = data.stdout.trimEnd();
+        terminalLog.appendChild(out);
+      }
+      if (data.stderr) {
+        const err = document.createElement('div');
+        err.className = 'term-log-err';
+        err.textContent = data.stderr.trimEnd();
+        terminalLog.appendChild(err);
+      }
+      if (!data.stdout && !data.stderr) {
+        const ex = document.createElement('div');
+        ex.style.color = '#444';
+        ex.textContent = '(exit ' + (data.code ?? 0) + ')';
+        terminalLog.appendChild(ex);
+      }
+    } catch (e) {
+      const err = document.createElement('div');
+      err.className = 'term-log-err';
+      err.textContent = 'Error: ' + (e.message || String(e));
+      terminalLog.appendChild(err);
+    } finally {
+      termRunning = false;
+      termSpinner.style.display = 'none';
+      document.querySelectorAll('.term-quick-btn').forEach(b => b.disabled = false);
+      terminalLog.scrollTop = terminalLog.scrollHeight;
+      terminalInput.focus();
+    }
+  }
+
+  document.querySelectorAll('.term-quick-btn').forEach(btn => {
+    btn.onclick = () => runTerminalCmd(btn.dataset.cmd);
+  });
+  terminalInput.onkeydown = (e) => {
+    if (e.key === 'Enter') { runTerminalCmd(terminalInput.value); terminalInput.value = ''; }
+  };
 
   // ── WebSocket ────────────────────────────────────────
   function setConnected(ok) {
-    wsDot.className = 'dot' + (ok ? ' connected' : '');
-    wsLabel.textContent = ok ? 'Connected' : 'Reconnecting…';
-    wsLabel.style.color = ok ? '#22c55e' : 'var(--text2)';
+    [document.getElementById('ws-dot'), document.getElementById('ws-dot-side')].forEach(d => {
+      if (d) d.className = 'dot' + (ok ? ' connected' : '');
+    });
+    const label = ok ? 'Connected' : 'Reconnecting…';
+    const color = ok ? '#22c55e' : '#444';
+    [document.getElementById('ws-label'), document.getElementById('ws-label-side')].forEach(el => {
+      if (el) { el.textContent = label; el.style.color = color; }
+    });
   }
 
   function connectWs() {
     ws = new WebSocket(wsUrl);
-    ws.onopen = () => { setConnected(true); };
+    ws.onopen = () => setConnected(true);
     ws.onclose = () => { setConnected(false); setTimeout(connectWs, 3000); };
     ws.onerror = () => setConnected(false);
     ws.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data);
-        if (msg.type === 'connect.ok' || msg.type === 'auth.ok') {
-          // connected
-        } else if (msg.type === 'chat:chunk') {
-          if (!currentBubble) {
-            removeTyping();
-            currentBubble = addMsg('assistant', '', true);
-          }
+        if (msg.type === 'chat:chunk') {
+          if (!currentBubble) { removeTyping(); currentBubble = addMsg('assistant', '', true); }
           currentBubble._raw = (currentBubble._raw || '') + (msg.content || '');
           currentBubble.textContent = currentBubble._raw;
           messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -290,11 +644,8 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // ── Message helpers ───────────────────────────────────
-  function now() {
-    return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-  }
-  let lastTimestampEl = null;
+  // ── Messages ─────────────────────────────────────────
+  function now() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 
   function addMsg(role, content, streaming = false) {
     welcomeEl.style.display = 'none';
@@ -318,11 +669,13 @@
   }
 
   function addTimestamp() {
-    const t = document.createElement('div');
-    t.className = 'msg-time';
-    t.textContent = now();
     const last = messagesEl.querySelector('.msg-row.assistant:last-child');
-    if (last) last.appendChild(t);
+    if (last) {
+      const t = document.createElement('div');
+      t.className = 'msg-time';
+      t.textContent = now();
+      last.appendChild(t);
+    }
   }
 
   let workingTicker = null;
@@ -332,12 +685,10 @@
     row.className = 'msg-row assistant';
     row.id = 'typing-row';
     let sec = 0;
-    row.innerHTML = '<div class="msg-avatar">🦅</div><div class="msg-bubble" style="padding:14px 18px"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span> <span id="working-text" style="margin-left:8px;color:var(--text2);font-size:12px">Working (0s)</span></div>';
+    row.innerHTML = '<div class="msg-avatar">🦅</div><div class="msg-bubble" style="padding:12px 16px"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span><span id="wt" style="margin-left:8px;color:#444;font-size:11px">Thinking…</span></div>';
     messagesEl.appendChild(row);
     messagesEl.scrollTop = messagesEl.scrollHeight;
-    workingTicker = setInterval(() => {
-      sec++; const el = document.getElementById('working-text'); if (el) el.textContent = 'Working (' + sec + 's)';
-    }, 1000);
+    workingTicker = setInterval(() => { sec++; const el = document.getElementById('wt'); if (el) el.textContent = sec + 's'; }, 1000);
   }
 
   function removeTyping() {
@@ -345,16 +696,18 @@
     document.getElementById('typing-row')?.remove();
   }
 
-  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // ── Send ─────────────────────────────────────────────
+  let msgCount = 0;
   form.onsubmit = async (e) => {
     e.preventDefault();
     const msg = input.value.trim();
     if (!msg || isStreaming) return;
-    const preset = promptSelect?.value || '';
-    const prefix = PROMPT_PREFIX[preset] || '';
+    const prefix = PROMPT_PREFIX[activePreset] || '';
     const fullMsg = prefix ? prefix + msg : msg;
+    if (msgCount === 0) saveCurrentChat(msg);
+    msgCount++;
     addMsg('user', msg);
     input.value = '';
     input.style.height = 'auto';
@@ -365,7 +718,6 @@
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'chat:message', content: fullMsg, source: 'webchat' }));
     } else {
-      // REST fallback
       try {
         const res = await fetch(apiUrl + '/api/chat', {
           method: 'POST', headers: {'Content-Type':'application/json'},
@@ -383,70 +735,29 @@
     }
   };
 
+  // ── Chips ────────────────────────────────────────────
+  function fillInput(el) { input.value = el.textContent; input.focus(); autoResize(); }
+
   // ── Textarea auto-resize ──────────────────────────────
   function autoResize() {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 130) + 'px';
   }
   input.addEventListener('input', autoResize);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.dispatchEvent(new Event('submit')); }
   });
 
-  // ── Local Terminal ───────────────────────────────────
-  const terminalToggle = document.getElementById('terminal-toggle');
-  const terminalBody = document.getElementById('terminal-body');
-  const terminalLog = document.getElementById('terminal-log');
-  const terminalInput = document.getElementById('terminal-input');
-  const terminalRun = document.getElementById('terminal-run');
-  const toggleLabel = document.getElementById('terminal-toggle-label');
-  let terminalRunning = false;
-
-  terminalToggle.onclick = () => {
-    terminalBody.classList.toggle('open', !terminalBody.classList.contains('open'));
-    toggleLabel.textContent = terminalBody.classList.contains('open') ? 'Hide' : 'Show';
-  };
-
-  async function runTerminalCmd(cmd) {
-    cmd = (cmd || '').trim();
-    if (!cmd || terminalRunning) return;
-    terminalLog.append('$ ' + cmd + '\n');
-    terminalLog.scrollTop = terminalLog.scrollHeight;
-    terminalRunning = true;
-    terminalRun.disabled = true;
-    document.querySelectorAll('.terminal-btn[data-cmd]').forEach(b => b.disabled = true);
-    try {
-      const res = await fetch(apiUrl + '/api/terminal', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({command: cmd})
-      });
-      const data = await res.json();
-      if (data.stdout) terminalLog.append(data.stdout.trimEnd() + '\n');
-      if (data.stderr) terminalLog.append('! ' + data.stderr.trimEnd() + '\n');
-      terminalLog.append('(exit code ' + (data.code ?? 0) + ')\n');
-    } catch (e) {
-      terminalLog.append('Error: ' + (e.message || String(e)) + '\n');
-    } finally {
-      terminalRunning = false;
-      terminalRun.disabled = false;
-      document.querySelectorAll('.terminal-btn[data-cmd]').forEach(b => b.disabled = false);
-      terminalLog.scrollTop = terminalLog.scrollHeight;
-    }
-  }
-
-  document.querySelectorAll('.terminal-btn[data-cmd]').forEach(btn => {
-    btn.onclick = () => runTerminalCmd(btn.dataset.cmd);
-  });
-  terminalRun.onclick = () => { runTerminalCmd(terminalInput.value); terminalInput.value = ''; };
-  terminalInput.onkeydown = (e) => {
-    if (e.key === 'Enter') { runTerminalCmd(terminalInput.value); terminalInput.value = ''; }
-  };
-
   // ── Init ─────────────────────────────────────────────
   connectWs();
   fetch(apiUrl + '/api/status').then(r => r.json()).then(d => {
-    if (d.agentName) agentSub.textContent = `${d.agentName} · ${d.model || '—'} · port ${d.port || port}`;
-    if (d.model) modelHint.textContent = d.model;
+    if (d.model) {
+      document.getElementById('model-hint').textContent = d.model;
+      document.getElementById('model-label').textContent = d.model;
+      const ver = d.version || '5.3.3';
+      document.getElementById('banner-sub').textContent = `HyperClaw Bot  \u00b7  AI Gateway  v${ver}`;
+    }
+    document.documentElement.setAttribute('data-daemon', d.daemonMode ? 'true' : 'false');
   }).catch(() => {});
 </script>
 </body>

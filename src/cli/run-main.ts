@@ -77,7 +77,7 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.3.2')
+  .version('5.3.3')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -88,27 +88,27 @@ program
   Full commands reference: READMECOMMAND.md (all commands and options)
 
   Main command groups:
-    init, onboard, quickstart, setup
-    gateway status|start|stop|restart, daemon start|stop|restart|status|logs
-    web — React Web UI (auto npm install + dev server)
-    chat — terminal chat
-    agent -m "message"
-    channels list|add|remove|login|status
-    hooks list|enable|disable|info
-    pairing list|approve, devices list|pair|approve|reject|unpair
-    hub, skill search|list|install
-    memory show|add-rule|add-fact|search|clear|save
-    config show|set-key|schema, secrets audit|set|apply|reload
-    doctor [--fix], health, security audit
-    status, dashboard
-    threads list|terminate, canvas show|add|clear|export
-    mcp list|add|remove|probe, node list|add|probe|remove
-    cron list|add|remove, webhooks list|remove|toggle, logs
-    voice, theme list|set|preview, workspace init|show
-    pc status|enable|disable|log|run
-    bot status|setup|start|stop
-    auth add|remove|oauth|setup-token
-    osint [workflow], deploy, update, message send
+    ✓ init, onboard, quickstart, setup
+    ✓ gateway status|start|stop|restart, daemon start|stop|restart|status|logs
+    ✓ web — 🌐 React Web UI (auto npm install + dev server)
+    ✓ chat — 💬 terminal chat
+    ✓ agent -m "message"
+    ✓ channels list|add|remove|login|status
+    ✓ hooks list|enable|disable|info
+    ✓ pairing list|approve, devices list|pair|approve|reject|unpair
+    ✓ hub, skill search|list|install
+    ✓ memory show|add-rule|add-fact|search|clear|save
+    ✓ config show|set-key|schema, secrets audit|set|apply|reload
+    ✓ doctor [--fix], health, security audit
+    ✓ status, dashboard
+    ✓ threads list|terminate, canvas show|add|clear|export
+    ✓ mcp list|add|remove|probe, node list|add|probe|remove
+    ✓ cron list|add|remove, webhooks list|remove|toggle, logs
+    ✓ voice, theme list|set|preview, workspace init|show
+    ✓ pc status|enable|disable|log|run
+    ✓ bot status|setup|start|stop
+    ✓ auth add|remove|oauth|setup-token
+    ✓ osint [workflow], deploy, update, message send
 
   Examples: hyperclaw onboard | hyperclaw chat | hyperclaw gateway status
   Run "hyperclaw" with no args for quick actions, or see READMECOMMAND.md for full list.`)
@@ -668,11 +668,44 @@ program.command('web')
     const path = await import('path');
     const fs = await import('fs-extra');
     const { spawn } = await import('child_process');
-    const root = path.join(process.cwd(), 'apps', 'web');
-    const altRoot = path.join(__dirname, '..', '..', 'apps', 'web');
-    const webDir = (await fs.pathExists(root)) ? root : (await fs.pathExists(altRoot)) ? altRoot : null;
-    if (!webDir || !(await fs.pathExists(path.join(webDir, 'package.json')))) {
-      console.log(chalk.gray('\n  React Web UI not found. Run from HyperClaw repo root.\n'));
+
+    // Find apps/web by checking multiple locations
+    async function findWebDir(): Promise<string | null> {
+      const candidates: string[] = [];
+
+      // 1. HYPERCLAW_ROOT env variable
+      if (process.env.HYPERCLAW_ROOT) {
+        candidates.push(path.join(process.env.HYPERCLAW_ROOT, 'apps', 'web'));
+      }
+
+      // 2. Current working directory
+      candidates.push(path.join(process.cwd(), 'apps', 'web'));
+
+      // 3. Walk up the directory tree from cwd
+      let dir = process.cwd();
+      for (let i = 0; i < 6; i++) {
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+        candidates.push(path.join(dir, 'apps', 'web'));
+      }
+
+      // 4. Relative to the CLI binary (__dirname)
+      candidates.push(path.join(__dirname, '..', '..', 'apps', 'web'));
+      candidates.push(path.join(__dirname, '..', '..', '..', 'apps', 'web'));
+
+      for (const candidate of candidates) {
+        if (await fs.pathExists(path.join(candidate, 'package.json'))) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    const webDir = await findWebDir();
+    if (!webDir) {
+      console.log(chalk.gray('\n  React Web UI not found. Set HYPERCLAW_ROOT to your repo path or run from the repo directory.\n'));
+      console.log(chalk.gray('  Example: HYPERCLAW_ROOT=/path/to/hyperclaw hyperclaw web\n'));
       process.exit(1);
     }
     console.log(chalk.bold.hex('#06b6d4')('\n  🦅 HyperClaw Web UI\n'));
@@ -841,7 +874,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.3.2")',
+      version: 'string (e.g. "5.3.3")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -1004,9 +1037,9 @@ program.command('status')
       console.log(t.bold('\n  ─── Deep status ───\n'));
       try {
         const cfg = await fs.readJson(configPath);
-        console.log(t.muted('  Config: ') + (cfg ? t.success('loaded') : t.error('missing')));
+        console.log(t.muted('  Config: ') + (cfg ? t.success('✓ loaded') : t.error('✗ missing')));
         console.log(t.muted('  Channels: ') + JSON.stringify(cfg?.gateway?.enabledChannels || cfg?.channels || []));
-      } catch { console.log(t.muted('  Config: ') + t.error('unreadable')); }
+      } catch { console.log(t.muted('  Config: ') + t.error('✗ unreadable')); }
       if (opts.deep) {
         const http = await import('http');
         const { resolveGatewayUrl } = await import('../commands/health');
@@ -1029,13 +1062,13 @@ program.command('status')
               res.on('end', () => {
                 try {
                   const j = JSON.parse(d);
-                  console.log(t.muted('  Gateway: ') + t.success('reachable') + ` (sessions: ${j.sessions ?? '-'}, uptime: ${j.uptime ?? '-'})`);
-                } catch { console.log(t.muted('  Gateway: ') + t.error('unreachable or invalid response')); }
+                  console.log(t.muted('  Gateway: ') + t.success('✓ reachable') + ` (sessions: ${j.sessions ?? '-'}, uptime: ${j.uptime ?? '-'})`);
+                } catch { console.log(t.muted('  Gateway: ') + t.error('✗ unreachable or invalid response')); }
                 resolve();
               });
             });
-            req.on('error', () => { console.log(t.muted('  Gateway: ') + t.error('unreachable')); resolve(); });
-            req.on('timeout', () => { req.destroy(); console.log(t.muted('  Gateway: ') + t.error('timeout')); resolve(); });
+            req.on('error', () => { console.log(t.muted('  Gateway: ') + t.error('✗ unreachable')); resolve(); });
+            req.on('timeout', () => { req.destroy(); console.log(t.muted('  Gateway: ') + t.error('✗ timeout')); resolve(); });
             req.end();
           });
         } else {
@@ -1046,13 +1079,13 @@ program.command('status')
               res.on('end', () => {
                 try {
                   const j = JSON.parse(d);
-                  console.log(t.muted('  Gateway: ') + t.success('reachable') + ` (sessions: ${j.sessions ?? '-'}, uptime: ${j.uptime ?? '-'})`);
-                } catch { console.log(t.muted('  Gateway: ') + t.error('unreachable or invalid response')); }
+                  console.log(t.muted('  Gateway: ') + t.success('✓ reachable') + ` (sessions: ${j.sessions ?? '-'}, uptime: ${j.uptime ?? '-'})`);
+                } catch { console.log(t.muted('  Gateway: ') + t.error('✗ unreachable or invalid response')); }
                 resolve();
               });
             });
-            req.on('error', () => { console.log(t.muted('  Gateway: ') + t.error('unreachable')); resolve(); });
-            req.on('timeout', () => { req.destroy(); console.log(t.muted('  Gateway: ') + t.error('timeout')); resolve(); });
+            req.on('error', () => { console.log(t.muted('  Gateway: ') + t.error('✗ unreachable')); resolve(); });
+            req.on('timeout', () => { req.destroy(); console.log(t.muted('  Gateway: ') + t.error('✗ timeout')); resolve(); });
             req.end();
           });
         }
@@ -2132,14 +2165,14 @@ if (process.argv.length === 2) {
       const t = getTheme(false);
       const chalk = require('chalk');
       console.log(t.bold('  Quick actions:\n'));
-      console.log(`  ${t.c('hyperclaw web')}                        — React Web UI (auto install + start)`);
-      console.log(`  ${t.c('hyperclaw chat')}                       — terminal chat`);
-      console.log(`  ${t.c('hyperclaw onboard')}                    — re-run setup wizard`);
-      console.log(`  ${t.c('hyperclaw daemon start')}               — start background service`);
-      console.log(`  ${t.c('hyperclaw daemon status')}              — service status`);
-      console.log(`  ${t.c('hyperclaw status')}                     — system overview`);
-      console.log(`  ${t.c('hyperclaw doctor')}                     — health check & fix issues`);
-      console.log(`  ${t.c('hyperclaw --help')}                     — all commands\n`);
+      console.log(`  ✓ ${t.c('hyperclaw web')}                        — 🌐 React Web UI (auto install + start)`);
+      console.log(`  ✓ ${t.c('hyperclaw chat')}                       — 💬 terminal chat`);
+      console.log(`  ✓ ${t.c('hyperclaw onboard')}                    — ⚙️ re-run setup wizard`);
+      console.log(`  ✓ ${t.c('hyperclaw daemon start')}               — 🚀 start background service`);
+      console.log(`  ✓ ${t.c('hyperclaw daemon status')}              — 📊 service status`);
+      console.log(`  ✓ ${t.c('hyperclaw status')}                     — 📋 system overview`);
+      console.log(`  ✓ ${t.c('hyperclaw doctor')}                     — 🔧 health check & fix issues`);
+      console.log(`  ✓ ${t.c('hyperclaw --help')}                     — 📖 all commands\n`);
     } else {
       // First run → launch wizard automatically
       await (new Banner()).showNeonBanner(false);
