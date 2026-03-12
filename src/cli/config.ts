@@ -149,10 +149,15 @@ export interface AgentDefaults {
   tools?: AgentToolPolicy;
 }
 
+export interface AgentsRuntimeConfig {
+  userWorkspaceEnabled?: boolean;
+}
+
 /** Full agents configuration block. */
 export interface AgentsConfig {
   defaults?: AgentDefaults;
   list?: AgentListItem[];
+  runtime?: AgentsRuntimeConfig;
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────

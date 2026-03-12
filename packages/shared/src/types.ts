@@ -81,9 +81,14 @@ export interface HyperClawAgentDefaults {
   tools?: AgentToolPolicy;
 }
 
+export interface AgentsRuntimeConfig {
+  userWorkspaceEnabled?: boolean;
+}
+
 export interface AgentsConfig {
   defaults?: HyperClawAgentDefaults;
   list?: AgentListItem[];
+  runtime?: AgentsRuntimeConfig;
 }
 
 // ─── Bindings ─────────────────────────────────────────────────────────────────
