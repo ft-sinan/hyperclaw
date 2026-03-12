@@ -114,7 +114,7 @@ export class Dashboard {
     const logRow = (content: string) => console.log(row(content));
 
     console.log(c('├' + line + '┤'));
-    console.log(c('│') + chalk.bold.hex('#06b6d4')(`${'🦅 HYPERCLAW v5.2.1 — GATEWAY DASHBOARD'.padStart(45).padEnd(w)}`) + c('│'));
+    console.log(c('│') + chalk.bold.hex('#06b6d4')(`${'🦅 HYPERCLAW v5.3.45 — GATEWAY DASHBOARD'.padStart(45).padEnd(w)}`) + c('│'));
     console.log(c('├' + line + '┤'));
     logRow(`${statusDot} Gateway  ${statusText}   ${chalk.gray('│')}  ws://localhost:${port}   ${chalk.gray('│')}  Agent: ${c(agent)}`);
     logRow(`${c('●')} Model     ${chalk.gray(model.slice(0, 30))}   ${chalk.gray('│')}  User: ${c(user)}`);

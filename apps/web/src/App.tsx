@@ -1,6 +1,6 @@
 /**
- * apps/web/src/App.tsx — HyperClaw Web UI v5.3.3
- * Professional dark/light · Cyan normal · Red daemon · Voice · CSS-var driven
+ * apps/web/src/App.tsx β€” HyperClaw Web UI v5.3.45
+ * Professional dark/light Β· Cyan normal Β· Red daemon Β· Voice Β· CSS-var driven
  */
 
 import React, {
@@ -15,27 +15,27 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.3.4';
+const APP_VERSION = '5.3.45';
 
-// ─── Theme context ────────────────────────────────────────────────────────────
+// β”€β”€β”€ Theme context β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 interface ThemeCtxType { isDark: boolean; toggle: () => void; }
 const ThemeCtx = createContext<ThemeCtxType>({ isDark: true, toggle: () => {} });
 const useTheme = () => useContext(ThemeCtx);
 
-// ─── API ──────────────────────────────────────────────────────────────────────
+// β”€β”€β”€ API β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 const DEFAULT_GW = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_GATEWAY_URL) || 'http://localhost:18789';
 const api = axios.create({ baseURL: DEFAULT_GW, timeout: 30000 });
 function setApiBaseUrl(url: string) { api.defaults.baseURL = url.replace(/\/$/, ''); }
 
-// ─── Query client ─────────────────────────────────────────────────────────────
+// β”€β”€β”€ Query client β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5000, retry: 1, refetchOnWindowFocus: false } },
 });
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Types β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 type Page = 'chat' | 'dashboard' | 'canvas' | 'hub' | 'memory' | 'settings';
 type ThinkingLevel = 'none' | 'low' | 'medium' | 'high';
@@ -59,7 +59,7 @@ interface TerminalResult {
 }
 interface Project { id: string; name: string; prompt: string; color: string; }
 
-// ─── Hooks ────────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Hooks β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function useGatewayStatus() {
   return useQuery<GatewayStatus>({
@@ -80,7 +80,7 @@ function useCostSummary() {
 function createWelcome(): ChatMessage {
   return {
     id: '0', role: 'assistant', timestamp: new Date().toISOString(),
-    content: '🦅 **HyperClaw**\n\nWelcome. Your gateway agent is ready — type or speak a message to begin.',
+    content: 'π¦… **HyperClaw**\n\nWelcome. Your gateway agent is ready β€” type or speak a message to begin.',
   };
 }
 
@@ -109,7 +109,7 @@ function useChat() {
     onError: () => {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(), role: 'assistant', timestamp: new Date().toISOString(),
-        content: '_⚠️ Gateway unreachable. Start with: `hyperclaw daemon start`_',
+        content: '_β οΈ Gateway unreachable. Start with: `hyperclaw daemon start`_',
       }]);
       setStreaming(false);
     },
@@ -148,7 +148,7 @@ function speakText(text: string) {
   window.speechSynthesis.speak(utt);
 }
 
-// ─── Projects ─────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Projects β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 const PRESET_PROJECTS: Project[] = [
   { id: '',               name: 'General',        prompt: '', color: 'var(--text3)' },
@@ -169,7 +169,7 @@ function getProjectPrompt(id: string): string {
   try { return ((JSON.parse(localStorage.getItem('hc_projects') || '[]') as Project[]).find(p => p.id === id)?.prompt || '') + ' '; } catch { return ''; }
 }
 
-// ─── SVG Icons ────────────────────────────────────────────────────────────────
+// β”€β”€β”€ SVG Icons β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 const Icons = {
   Plus:     () => <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>,
@@ -185,7 +185,7 @@ const Icons = {
   Send:     () => <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 12V3M3.5 7l4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 };
 
-// ─── Customize modal ──────────────────────────────────────────────────────────
+// β”€β”€β”€ Customize modal β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function CustomizeModal({ onSave, onClose }: { onSave: (p: Project) => void; onClose: () => void }) {
   const [name, setName] = useState('');
@@ -194,13 +194,13 @@ function CustomizeModal({ onSave, onClose }: { onSave: (p: Project) => void; onC
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }} onClick={onClose}>
       <div className="card w-96 max-w-[90vw] rounded-2xl p-6" style={{ background: 'var(--bg2)' }} onClick={e => e.stopPropagation()}>
-        <div className="text-sm font-semibold mb-5" style={{ color: 'var(--text)' }}>✦ New Project / Agent</div>
+        <div className="text-sm font-semibold mb-5" style={{ color: 'var(--text)' }}>β¦ New Project / Agent</div>
         <label className="text-xs mb-1 block" style={{ color: 'var(--text3)' }}>Name</label>
         <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Bug Hunter"
           className="input-base w-full rounded-lg px-3 py-2 text-sm mb-3" />
         <label className="text-xs mb-1 block" style={{ color: 'var(--text3)' }}>System prompt</label>
         <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={3}
-          placeholder="You are a security researcher…"
+          placeholder="You are a security researcherβ€¦"
           className="input-base w-full rounded-lg px-3 py-2 text-sm mb-3 resize-none" />
         <label className="text-xs mb-1 block" style={{ color: 'var(--text3)' }}>Accent color</label>
         <input type="color" value={color} onChange={e => setColor(e.target.value)}
@@ -215,13 +215,13 @@ function CustomizeModal({ onSave, onClose }: { onSave: (p: Project) => void; onC
   );
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Sidebar β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 const NAV_ITEMS: Array<{ page: Page; label: string; icon: JSX.Element }> = [
-  { page: 'dashboard', label: 'Dashboard', icon: <span>📊</span> },
-  { page: 'canvas',    label: 'Canvas',    icon: <span>🎨</span> },
-  { page: 'hub',       label: 'Skills',    icon: <span>🧩</span> },
-  { page: 'memory',    label: 'Memory',    icon: <span>🧠</span> },
+  { page: 'dashboard', label: 'Dashboard', icon: <span>π“</span> },
+  { page: 'canvas',    label: 'Canvas',    icon: <span>π¨</span> },
+  { page: 'hub',       label: 'Skills',    icon: <span>π§©</span> },
+  { page: 'memory',    label: 'Memory',    icon: <span>π§ </span> },
   { page: 'settings',  label: 'Settings',  icon: <Icons.Settings /> },
 ];
 
@@ -285,7 +285,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
           {/* Search */}
           <div className="relative mb-1">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text3)' }}><Icons.Search /></span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Searchβ€¦"
               className="input-base w-full rounded-lg pl-7 pr-3 py-1.5 text-xs" />
           </div>
 
@@ -309,7 +309,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
           ))}
           <button onClick={() => setShowCustomize(true)}
             className="nav-item w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs mt-0.5" style={{ color: 'var(--text3)' }}>
-            <Icons.Plus /> New project…
+            <Icons.Plus /> New projectβ€¦
           </button>
         </div>
 
@@ -343,7 +343,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
           <div className={`inline-flex items-center gap-1.5 text-xs font-medium ${!!status && !isError ? 'accent-text' : 'text-red-400'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${!!status && !isError ? 'animate-pulse' : ''}`}
               style={{ background: !!status && !isError ? 'var(--accent)' : '#ef4444' }} />
-            {!!status && !isError ? '✓ Online' : '✗ Offline'}
+            {!!status && !isError ? 'β“ Online' : 'β— Offline'}
           </div>
           {status?.model && <div className="text-[10px] mt-0.5 truncate font-mono" style={{ color: 'var(--text3)' }}>{status.model}</div>}
         </div>
@@ -352,7 +352,7 @@ function Sidebar({ page, setPage, activeProject, setActiveProject, onNewChat }: 
   );
 }
 
-// ─── Chat page ────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Chat page β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function ChatPage({ activeProject }: { activeProject: string }) {
   const { messages, sendMutation, streaming, clearChat } = useChat();
@@ -452,26 +452,26 @@ function ChatPage({ activeProject }: { activeProject: string }) {
             letterSpacing: '0.25em',
             marginTop: '8px',
             opacity: 0.75,
-          }}>HyperClaw Bot  ·  AI Gateway  v{APP_VERSION}</div>
+          }}>HyperClaw Bot  Β·  AI Gateway  v{APP_VERSION}</div>
         </div>
         {messages.map(msg => (
           <div key={msg.id} className={`msg-in flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm mr-2.5 flex-shrink-0 mt-0.5 accent-bg-sm"
-                style={{ border: '1px solid var(--accentBorder)' }}>🦅</div>
+                style={{ border: '1px solid var(--accentBorder)' }}>π¦…</div>
             )}
             <div className={`max-w-2xl rounded-2xl px-4 py-3 text-sm ${msg.role === 'user' ? 'bubble-user rounded-tr-sm' : 'bubble-asst rounded-tl-sm'}`}>
               {msg.thinking && (
                 <div className="text-xs mb-2 pb-2 font-mono" style={{ color: 'var(--text3)', borderBottom: '1px solid var(--border)' }}>
-                  💭 {msg.thinking.slice(0, 120)}…
+                  π’­ {msg.thinking.slice(0, 120)}β€¦
                 </div>
               )}
               {msg.toolCalls && msg.toolCalls.length > 0 && (
                 <div className="mb-2 space-y-1">
                   {msg.toolCalls.map((tc, i) => (
                     <div key={i} className="text-xs rounded px-2 py-1 font-mono" style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}>
-                      🔧 <span className="accent-text">{tc.name}</span>
-                      <span style={{ color: 'var(--text3)' }}> → {tc.result?.slice(0, 60)}</span>
+                      π”§ <span className="accent-text">{tc.name}</span>
+                      <span style={{ color: 'var(--text3)' }}> β†’ {tc.result?.slice(0, 60)}</span>
                     </div>
                   ))}
                 </div>
@@ -503,12 +503,12 @@ function ChatPage({ activeProject }: { activeProject: string }) {
 
         {streaming && (
           <div className="msg-in flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm accent-bg-sm" style={{ border: '1px solid var(--accentBorder)' }}>🦅</div>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm accent-bg-sm" style={{ border: '1px solid var(--accentBorder)' }}>π¦…</div>
             <div className="bubble-asst rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full accent-bg typing-dot-1" style={{ background: 'var(--accent)' }} />
               <span className="w-1.5 h-1.5 rounded-full accent-bg typing-dot-2" style={{ background: 'var(--accent)' }} />
               <span className="w-1.5 h-1.5 rounded-full accent-bg typing-dot-3" style={{ background: 'var(--accent)' }} />
-              <span className="text-xs ml-1" style={{ color: 'var(--text3)' }}>{workingSec > 0 ? `${workingSec}s` : 'Thinking…'}</span>
+              <span className="text-xs ml-1" style={{ color: 'var(--text3)' }}>{workingSec > 0 ? `${workingSec}s` : 'Thinkingβ€¦'}</span>
             </div>
           </div>
         )}
@@ -536,7 +536,7 @@ function ChatPage({ activeProject }: { activeProject: string }) {
             ref={textareaRef} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
-            rows={1} placeholder="Ask HyperClaw anything… Enter to send · Shift+Enter new line"
+            rows={1} placeholder="Ask HyperClaw anythingβ€¦ Enter to send Β· Shift+Enter new line"
             className="input-base flex-1 resize-none rounded-xl px-4 py-3 text-sm"
             style={{ minHeight: '48px', maxHeight: '140px' }}
             onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; }}
@@ -562,7 +562,7 @@ function ChatPage({ activeProject }: { activeProject: string }) {
         {listening && (
           <div className="mt-1.5 text-xs flex items-center gap-1.5 animate-pulse accent-text">
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
-            Listening… speak now
+            Listeningβ€¦ speak now
           </div>
         )}
       </div>
@@ -572,7 +572,7 @@ function ChatPage({ activeProject }: { activeProject: string }) {
   );
 }
 
-// ─── Terminal panel ───────────────────────────────────────────────────────────
+// β”€β”€β”€ Terminal panel β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [command, setCommand] = useState('');
@@ -625,8 +625,8 @@ function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }
           <div className="flex gap-1.5">
             {['#ff5f57', '#febc2e', '#28c840'].map(c => <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c, opacity: .7 }} />)}
           </div>
-          <span className="text-xs font-mono ml-1" style={{ color: 'var(--text3)' }}>{promptInfo || 'Terminal — HyperClaw'}</span>
-          {running && <span className="text-xs animate-pulse" style={{ color: '#fbbf24' }}>● running</span>}
+          <span className="text-xs font-mono ml-1" style={{ color: 'var(--text3)' }}>{promptInfo || 'Terminal β€” HyperClaw'}</span>
+          {running && <span className="text-xs animate-pulse" style={{ color: '#fbbf24' }}>β— running</span>}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setLines([])} className="text-xs transition-colors" style={{ color: 'var(--text3)' }}>clear</button>
@@ -655,9 +655,9 @@ function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }
       </div>
       {/* Input */}
       <div className="flex items-center gap-2 px-3 py-2 flex-shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg3)' }}>
-        <span className="font-mono text-xs flex-shrink-0 accent-text">›</span>
+        <span className="font-mono text-xs flex-shrink-0 accent-text">β€Ί</span>
         <input ref={inputRef} value={command} onChange={e => setCommand(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && run()} placeholder="Run a command…" disabled={running}
+          onKeyDown={e => e.key === 'Enter' && run()} placeholder="Run a commandβ€¦" disabled={running}
           className="flex-1 bg-transparent text-xs font-mono outline-none disabled:opacity-50"
           style={{ color: 'var(--text)', caretColor: 'var(--accent)' }} />
         {running && <div className="w-3 h-3 rounded-full border border-t-transparent animate-spin flex-shrink-0" style={{ borderColor: '#fbbf24', borderTopColor: 'transparent' }} />}
@@ -666,30 +666,30 @@ function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Dashboard β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function DashboardPage() {
   const { data: status, isLoading, isError } = useGatewayStatus();
   const { data: costData } = useCostSummary();
-  if (isLoading) return <div className="p-8 text-sm" style={{ color: 'var(--text3)' }}>Loading…</div>;
+  if (isLoading) return <div className="p-8 text-sm" style={{ color: 'var(--text3)' }}>Loadingβ€¦</div>;
   return (
     <div className="p-6 space-y-4 overflow-y-auto">
       <div className="rounded-2xl p-5 flex items-center justify-between" style={{ background: 'var(--accentBg)', border: '1px solid var(--accentBorder)' }}>
         <div>
-          <div className="text-xs uppercase tracking-wider flex items-center gap-1 accent-text">🦅 HyperClaw Dashboard</div>
+          <div className="text-xs uppercase tracking-wider flex items-center gap-1 accent-text">π¦… HyperClaw Dashboard</div>
           <div className="mt-1 text-xl font-bold">{status?.agentName || 'Your gateway agent'}</div>
-          <div className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>{status ? `${isError ? 'Offline' : 'Online'} · ${status.model} · :${status.port}` : 'Waiting…'}</div>
+          <div className="mt-0.5 text-xs" style={{ color: 'var(--text2)' }}>{status ? `${isError ? 'Offline' : 'Online'} Β· ${status.model} Β· :${status.port}` : 'Waitingβ€¦'}</div>
         </div>
         <div className={`inline-flex items-center gap-1.5 text-xs font-medium ${!!status && !isError ? 'accent-text' : 'text-red-400'}`}>
           <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: !!status && !isError ? 'var(--accent)' : '#ef4444' }} />
-          {!!status && !isError ? '✓ Online' : '✗ Offline'}
+          {!!status && !isError ? 'β“ Online' : 'β— Offline'}
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Gateway', value: isError ? 'Offline' : 'Online', accent: true, icon: '📡' },
-          { label: 'Channels', value: String(status?.channels?.length || 0), accent: true, icon: '📱' },
-          { label: 'Sessions', value: String(status?.sessions || 0), accent: false, icon: '👥' },
+          { label: 'Gateway', value: isError ? 'Offline' : 'Online', accent: true, icon: 'π“΅' },
+          { label: 'Channels', value: String(status?.channels?.length || 0), accent: true, icon: 'π“±' },
+          { label: 'Sessions', value: String(status?.sessions || 0), accent: false, icon: 'π‘¥' },
         ].map(c => (
           <div key={c.label} className="card rounded-xl">
             <div className="text-xs flex items-center gap-1.5 mb-2" style={{ color: 'var(--text3)' }}>{c.icon} {c.label}</div>
@@ -710,7 +710,7 @@ function DashboardPage() {
       )}
       {costData?.summary && (costData.summary.totalRuns ?? 0) > 0 && (
         <div className="card rounded-xl">
-          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>💰 Cost</div>
+          <div className="text-xs uppercase tracking-wider mb-3" style={{ color: 'var(--text3)' }}>π’° Cost</div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[['Runs', String(costData.summary.totalRuns)], ['Input', (costData.summary.totalInput ?? 0).toLocaleString()], ['Output', (costData.summary.totalOutput ?? 0).toLocaleString()], ['USD', '$' + (costData.summary.totalCostUsd ?? 0).toFixed(4)]].map(([k, v]) => (
               <div key={k}><span style={{ color: 'var(--text3)' }}>{k}</span><div className="font-mono accent-text">{v}</div></div>
@@ -735,7 +735,7 @@ function PlaceholderPage({ title, icon, desc, cmd }: { title: string; icon: stri
   );
 }
 
-// ─── Settings ─────────────────────────────────────────────────────────────────
+// β”€β”€β”€ Settings β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function SettingsPage() {
   const { data: status } = useGatewayStatus();
@@ -749,7 +749,7 @@ function SettingsPage() {
 
   return (
     <div className="p-6 space-y-4 overflow-y-auto">
-      <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text2)' }}>⚙️ Settings</h2>
+      <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--text2)' }}>β™οΈ Settings</h2>
       <div className="card rounded-xl space-y-3">
         <div className="text-xs uppercase tracking-wider" style={{ color: 'var(--text3)' }}>Gateway Connection</div>
         <div>
@@ -758,20 +758,20 @@ function SettingsPage() {
             <input value={gatewayUrl} onChange={e => setGatewayUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyUrl()}
               className="input-base flex-1 rounded-lg px-3 py-2 text-sm" />
             <button onClick={applyUrl} className={`px-3 py-2 rounded-lg text-xs font-medium transition-all text-white ${applied ? 'bg-green-600' : 'btn-primary'}`}>
-              {applied ? '✓' : 'Apply'}
+              {applied ? 'β“' : 'Apply'}
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: status ? 'var(--accent)' : '#ef4444', animation: status ? 'pulse 2s infinite' : 'none' }} />
-          <span className="text-xs" style={{ color: 'var(--text3)' }}>{status ? `Connected · port ${status.port}` : 'Disconnected'}</span>
+          <span className="text-xs" style={{ color: 'var(--text3)' }}>{status ? `Connected Β· port ${status.port}` : 'Disconnected'}</span>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── App shell ────────────────────────────────────────────────────────────────
+// β”€β”€β”€ App shell β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€β”€
 
 function AppShell() {
   const [page, setPage] = useState<Page>('chat');
@@ -803,9 +803,9 @@ function AppShell() {
     switch (page) {
       case 'chat':      return <ChatPage key={chatKey} activeProject={activeProject} />;
       case 'dashboard': return <DashboardPage />;
-      case 'canvas':    return <PlaceholderPage title="Canvas" icon="🎨" desc="AI-generated UI components" cmd="hyperclaw canvas show" />;
-      case 'hub':       return <PlaceholderPage title="Skill Hub" icon="🧩" desc="Browse and install skills" cmd="hyperclaw hub" />;
-      case 'memory':    return <PlaceholderPage title="Memory" icon="🧠" desc="AGENTS.md and MEMORY.md" cmd="hyperclaw memory show" />;
+      case 'canvas':    return <PlaceholderPage title="Canvas" icon="π¨" desc="AI-generated UI components" cmd="hyperclaw canvas show" />;
+      case 'hub':       return <PlaceholderPage title="Skill Hub" icon="π§©" desc="Browse and install skills" cmd="hyperclaw hub" />;
+      case 'memory':    return <PlaceholderPage title="Memory" icon="π§ " desc="AGENTS.md and MEMORY.md" cmd="hyperclaw memory show" />;
       case 'settings':  return <SettingsPage />;
     }
   };

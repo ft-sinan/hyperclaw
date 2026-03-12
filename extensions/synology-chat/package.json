@@ -1,6 +1,6 @@
 {
   "name": "@hyperclaw/extension-synology-chat",
-  "version": "5.2.1",
+  "version": "5.3.45",
   "description": "HyperClaw extension: Synology Chat channel via incoming/outgoing webhooks",
   "main": "index.ts",
   "license": "MIT",

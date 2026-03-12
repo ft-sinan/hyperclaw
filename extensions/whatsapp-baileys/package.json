@@ -1,6 +1,6 @@
 {
   "name": "@hyperclaw/extension-whatsapp-baileys",
-  "version": "1.0.0",
+  "version": "5.3.45",
   "description": "HyperClaw: WhatsApp via Baileys (WhatsApp Web)",
   "main": "src/connector.ts",
   "license": "MIT",

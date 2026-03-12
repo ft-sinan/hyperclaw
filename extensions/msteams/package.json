@@ -1,6 +1,6 @@
 {
   "name": "@hyperclaw/extension-msteams",
-  "version": "1.0.0",
+  "version": "5.3.45",
   "description": "HyperClaw extension: msteams channel support",
   "main": "index.ts",
   "license": "MIT"

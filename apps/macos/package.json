@@ -1,6 +1,6 @@
 {
   "name": "@hyperclaw/macos",
-  "version": "5.2.1",
+  "version": "5.3.45",
   "description": "HyperClaw menu bar app — production macOS helper",
   "main": "main.js",
   "private": true,
@@ -19,7 +19,10 @@
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "icons/icon.icns",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "extendInfo": {
         "LSUIElement": true,
         "NSMicrophoneUsageDescription": "HyperClaw uses the microphone for Voice PTT."

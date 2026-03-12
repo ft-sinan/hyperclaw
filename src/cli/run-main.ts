@@ -77,7 +77,7 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.3.4')
+  .version('5.3.45')
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -622,7 +622,7 @@ program.command('menu-bar')
   .action(async () => {
     const path = await import('path');
     const { spawn } = await import('child_process');
-    const fs = await import('fs-extra');
+    const fs = (await import('fs-extra')).default;
     const root = path.join(process.cwd(), 'apps', 'macos');
     const altRoot = path.join(__dirname, '..', '..', 'apps', 'macos');
     const macosDir = (await fs.pathExists(root)) ? root : (await fs.pathExists(altRoot)) ? altRoot : null;
@@ -666,7 +666,7 @@ program.command('web')
   .option('--port <port>', 'Port to serve on', '3000')
   .action(async (opts: { skipInstall?: boolean; port?: string }) => {
     const path = await import('path');
-    const fs = await import('fs-extra');
+    const fs = (await import('fs-extra')).default;
     const { spawn } = await import('child_process');
     const http = await import('http');
     const net = await import('net');
@@ -759,8 +759,44 @@ program.command('web')
       server.listen(PORT, () => {
         console.log(chalk.hex('#06b6d4')(`  Open: http://localhost:${PORT}\n`));
       });
-      process.on('SIGINT', () => { server.close(); process.exit(0); });
-      process.on('SIGTERM', () => { server.close(); process.exit(0); });
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        let closing = false;
+
+        const cleanup = () => {
+          server.off('close', onClose);
+          server.off('error', onError);
+          process.off('SIGINT', onSignal);
+          process.off('SIGTERM', onSignal);
+        };
+
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve();
+        };
+
+        const fail = (err: Error) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(err);
+        };
+
+        const onClose = () => finish();
+        const onError = (err: Error) => fail(err);
+        const onSignal = () => {
+          if (closing) return;
+          closing = true;
+          server.close(() => finish());
+        };
+
+        server.on('close', onClose);
+        server.on('error', onError);
+        process.on('SIGINT', onSignal);
+        process.on('SIGTERM', onSignal);
+      });
       return;
     }
 
@@ -783,8 +819,47 @@ program.command('web')
     }
     console.log(chalk.gray(`  Starting Vite dev server at http://localhost:${PORT}\n`));
     const child = spawn('npm', ['run', 'dev', '--', '--port', String(PORT)], { cwd: webDir, stdio: 'inherit', shell: true });
-    child.on('error', () => {});
-    child.on('exit', (code) => process.exit(code ?? 0));
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+
+      const cleanup = () => {
+        child.off('error', onError);
+        child.off('exit', onExit);
+        process.off('SIGINT', onSignal);
+        process.off('SIGTERM', onSignal);
+      };
+
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+
+      const fail = (err: Error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+
+      const onError = (err: Error) => fail(err);
+      const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+        if (signal || code === 0) {
+          finish();
+          return;
+        }
+        fail(new Error(`Vite dev server exited with code ${code}`));
+      };
+      const onSignal = (signal: NodeJS.Signals) => {
+        if (!child.killed) child.kill(signal);
+      };
+
+      child.on('error', onError);
+      child.on('exit', onExit);
+      process.on('SIGINT', onSignal);
+      process.on('SIGTERM', onSignal);
+    });
   });
 
 // ─── DOCTOR ──────────────────────────────────────────────────────────────────
@@ -937,7 +1012,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.3.4")',
+      version: 'string (e.g. "5.3.45")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -1093,7 +1168,7 @@ program.command('status')
   .action(async (opts) => {
     await (new Banner()).showStatus();
     if (opts.all || opts.deep) {
-      const fs = await import('fs-extra');
+      const fs = (await import('fs-extra')).default;
       const { getConfigPath } = await import('../infra/paths');
       const t = (await import('../infra/theme')).getTheme(false);
       const configPath = getConfigPath();
@@ -1572,7 +1647,7 @@ program.command('nodes')
   .action(async () => {
     const chalk = require('chalk');
     const http = await import('http');
-    const fs = await import('fs-extra');
+    const fs = (await import('fs-extra')).default;
     const { getConfigPath } = await import('../infra/paths');
     let port = 18789;
     try {
@@ -1718,7 +1793,7 @@ authCmd.command('add <service_id>')
     const { CredentialsStore } = await import('../secrets/credentials-store');
     const { getHyperClawDir, getEnvFilePath } = await import('../infra/paths');
     const { getApiKeyGuide, GENERIC_API_KEY_STEPS } = await import('../infra/api-keys-guide');
-    const fs = await import('fs-extra');
+    const fs = (await import('fs-extra')).default;
     const path = await import('path');
 
     const guide = getApiKeyGuide(serviceId);
@@ -1785,7 +1860,7 @@ authCmd.command('remove <service_id>')
     const chalk = require('chalk');
     const { CredentialsStore } = await import('../secrets/credentials-store');
     const { getHyperClawDir, getEnvFilePath } = await import('../infra/paths');
-    const fs = await import('fs-extra');
+    const fs = (await import('fs-extra')).default;
 
     const safeId = serviceId.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
     const creds = new CredentialsStore(getHyperClawDir());

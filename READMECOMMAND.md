@@ -276,7 +276,7 @@ The gateway’s built-in chat at `http://localhost:18789/chat` uses the static H
 
 ---
 
-## Web UI & Terminal API (v5.3.4+)
+## Web UI & Terminal API (v5.3.45+)
 
 - **Web UI**: After `hyperclaw gateway` or `hyperclaw daemon start`, open `http://localhost:18789` (or your gateway port). Dashboard, Chat with New chat / Clear messages, and **Local terminal** panel below the chat — with Build, Install, Test, Doctor buttons.
 - **Terminal API**: `POST /api/terminal` with `{ "command": "npm run build" }` — runs a command in the gateway's cwd.

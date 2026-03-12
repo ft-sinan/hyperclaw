@@ -275,7 +275,7 @@ export class MCPRegistry {
       // Send MCP initialize request
       const initReq = JSON.stringify({
         jsonrpc: '2.0', id: 1, method: 'initialize',
-        params: { protocolVersion: '2024-11-05', clientInfo: { name: 'hyperclaw', version: '5.3.4' }, capabilities: {} }
+        params: { protocolVersion: '2024-11-05', clientInfo: { name: 'hyperclaw', version: '5.3.45' }, capabilities: {} }
       }) + '\n';
 
       let responded = false;

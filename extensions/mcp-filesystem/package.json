@@ -1,6 +1,6 @@
 {
   "name": "@hyperclaw/mcp-filesystem",
-  "version": "1.0.0",
+  "version": "5.3.45",
   "description": "HyperClaw MCP server — filesystem tools (read, write, list, search, delete)",
   "type": "module",
   "bin": {
@@ -9,6 +9,10 @@
   "scripts": {
     "start": "node server.mjs"
   },
-  "keywords": ["mcp", "filesystem", "hyperclaw"],
+  "keywords": [
+    "mcp",
+    "filesystem",
+    "hyperclaw"
+  ],
   "license": "MIT"
 }

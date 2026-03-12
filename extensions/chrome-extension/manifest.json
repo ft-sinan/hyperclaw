@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "HyperClaw Gateway",
-  "version": "5.2.1",
+  "version": "5.3.45",
   "description": "Connect your browser to the HyperClaw gateway. Relay messages, share page content, and trigger agent actions from any tab.",
   "permissions": [
     "storage",
