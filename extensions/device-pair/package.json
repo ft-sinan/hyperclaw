@@ -1,0 +1,8 @@
+{
+  "name": "@hyperclaw/device-pair",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Device pairing extension — pairing flows and device management",
+  "main": "src/index.ts",
+  "keywords": ["hyperclaw", "device", "pair", "extension"]
+}

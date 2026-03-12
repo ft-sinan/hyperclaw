@@ -15,6 +15,39 @@ import { getHyperClawDir } from '../infra/paths';
 const CLAWHUB_API = process.env.CLAWHUB_API_URL || 'https://clawhub.com';
 const WORKSPACE_SKILLS = path.join(getHyperClawDir(), 'workspace', 'skills');
 
+/** Community registry JSON path (bundled). Fallback when remote unavailable. */
+function getCommunityRegistryPaths(): string[] {
+  return [
+    path.join(process.cwd(), 'data', 'community-skills.json'),
+    path.join(__dirname, '..', '..', 'data', 'community-skills.json'),
+    path.join(getHyperClawDir(), 'data', 'community-skills.json')
+  ];
+}
+
+/** Load bundled community skills. Returns [] on error. */
+export async function loadCommunityRegistry(): Promise<ClawHubSkill[]> {
+  try {
+    for (const fp of getCommunityRegistryPaths()) {
+      if (!(await fs.pathExists(fp))) continue;
+      const data = await fs.readJson(fp);
+      const arr = data?.skills ?? [];
+      return arr.map((s: Record<string, unknown>) => ({
+        id: String(s.id ?? ''),
+        name: String(s.name ?? s.id ?? ''),
+        author: s.author ? String(s.author) : undefined,
+        description: s.description ? String(s.description) : undefined,
+        rating: typeof s.rating === 'number' ? s.rating : 4,
+        downloads: typeof s.downloads === 'number' ? s.downloads : 0,
+        version: s.version ? String(s.version) : undefined,
+        categories: Array.isArray(s.categories) ? s.categories.map(String) : []
+      })).filter((s: ClawHubSkill) => !!s.id);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export interface ClawHubSkill {
   id: string;
   name: string;
@@ -32,11 +65,16 @@ export async function searchSkills(query: string, category?: string): Promise<Cl
   const url = `${CLAWHUB_API}/api/skills/search?${q}`;
   try {
     const body = await fetchJson(url);
-    return Array.isArray(body.skills) ? body.skills : (Array.isArray(body) ? body : []);
-  } catch (e: any) {
-    // Return empty when registry unavailable (network, timeout, 404)
-    return [];
+    const remote = Array.isArray(body.skills) ? body.skills : (Array.isArray(body) ? body : []);
+    if (remote.length > 0) return remote;
+  } catch {
+    // Remote registry unavailable — fall back to community + bundled
   }
+  const community = await loadCommunityRegistry();
+  const ql = (query || '').toLowerCase();
+  return community.filter(s =>
+    !ql || (s.id + ' ' + (s.name || '') + ' ' + (s.description || '')).toLowerCase().includes(ql)
+  ).filter(s => !category || (s.categories && s.categories.includes(category)));
 }
 
 export async function installSkill(skillId: string, version?: string): Promise<string> {

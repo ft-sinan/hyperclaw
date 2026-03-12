@@ -1,0 +1,20 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "back": "戻る"
+  },
+  "chat": {
+    "placeholder": "メッセージを入力...",
+    "send": "送信",
+    "newChat": "新しいチャット",
+    "clear": "クリア"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "online": "オンライン",
+    "offline": "オフライン"
+  }
+}

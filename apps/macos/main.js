@@ -107,7 +107,12 @@ function scheduleReconnect() {
 function sendChatMessage(text) {
   if (!ws || ws.readyState !== 1) return false;
   try {
-    ws.send(JSON.stringify({ type: 'chat:message', content: text, source: 'macos' }));
+    const modelId = store.getModelId();
+    const thinking = store.getThinkingLevel();
+    const payload = { type: 'chat:message', content: text, source: 'macos' };
+    if (modelId) payload.modelId = modelId;
+    if (thinking && thinking !== 'none') payload.thinking = thinking;
+    ws.send(JSON.stringify(payload));
     return true;
   } catch { return false; }
 }

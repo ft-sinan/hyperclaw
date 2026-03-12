@@ -15,6 +15,8 @@ export interface CronTask {
   schedule: string;   // cron expression, e.g. "0 9 * * 1-5"
   prompt: string;
   name?: string;
+  /** Optional skill ID to route this task (e.g. "morning-briefing") */
+  skillId?: string;
   enabled: boolean;
   lastRunAt?: string;
   createdAt: string;
@@ -41,13 +43,14 @@ export function getCronTasks(): CronTask[] {
   return [...tasks];
 }
 
-export function addCronTask(schedule: string, prompt: string, name?: string): CronTask {
+export function addCronTask(schedule: string, prompt: string, name?: string, skillId?: string): CronTask {
   const id = `task-${Date.now().toString(36)}`;
   const task: CronTask = {
     id,
     schedule,
     prompt,
     name,
+    skillId,
     enabled: true,
     createdAt: new Date().toISOString()
   };
@@ -64,7 +67,10 @@ export function removeCronTask(id: string): boolean {
 export async function runCronTask(task: CronTask, port = 18789): Promise<void> {
   const http = await import('http');
   return new Promise((resolve, reject) => {
-    const payload = JSON.stringify({ message: task.prompt });
+    const payload = JSON.stringify({
+    message: task.prompt,
+    ...(task.skillId ? { skillId: task.skillId } : {})
+  });
     const req = http.request({
       hostname: '127.0.0.1',
       port,

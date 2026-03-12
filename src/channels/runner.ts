@@ -9,7 +9,7 @@ import http from 'http';
 import { getConfigPath } from '../infra/paths';
 import { chunkForChannel, withRetry } from './delivery';
 import { resolveBroadcast, dispatchBroadcast, extractBroadcastConfig } from '../routing/broadcast';
-import { resolveBinding, extractBindings, extractAgentsList, buildInboundContext } from '../routing/binding-resolver';
+import { resolveBinding, resolveDefaultAgent, extractBindings, extractAgentsList, buildInboundContext } from '../routing/binding-resolver';
 import { buildSessionKey, resolveIdentityLink, extractSessionConfig } from '../routing/session-keys';
 
 export interface ChannelRunnerOpts {
@@ -192,6 +192,7 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
           allowFrom: allowFromArr,
           groupAllowFrom,
           groupActivation,
+          inlineMode: chCfg?.inlineMode === true,
           pendingPairings: {},
           approvedPairings: [],
           // C-5: pairingBridge wires DM auth checks to the persistent PairingStore.
@@ -199,6 +200,32 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
           pairingBridge: tgPairingBridge
         } as any);
         conn.on('message', (msg: { chatId: number; text: string }) => handleMsg(msg, wrap(conn as any), 'telegram'));
+        conn.on('inline_query', async (iq: { id: string; from: string; query: string }) => {
+          if (!iq.query.trim()) {
+            await (conn as any).answerInlineQuery(iq.id, [{ id: '1', title: 'Type a question', description: 'Ask HyperClaw anything', message_text: '🦅 Use @botname &lt;question&gt; to query HyperClaw.' }]);
+            return;
+          }
+          try {
+            const agentId = resolveDefaultAgent(agentsList);
+            const sessionKey = `agent:${agentId}:inline:${iq.from}`;
+            const response = await postChat(baseUrl, iq.query.trim(), 'telegram', authToken, agentId, sessionKey);
+            const text = (response || '').slice(0, 4000);
+            await (conn as any).answerInlineQuery(iq.id, [{
+              id: '1',
+              title: text.slice(0, 64) + (text.length > 64 ? '…' : ''),
+              description: 'HyperClaw',
+              message_text: text || '(no response)',
+              parse_mode: 'Markdown'
+            }]);
+          } catch (e: any) {
+            await (conn as any).answerInlineQuery(iq.id, [{
+              id: '1',
+              title: 'Error',
+              description: e?.message?.slice(0, 100),
+              message_text: `⚠️ ${e?.message || 'Error'}`
+            }]).catch(() => {});
+          }
+        });
         await conn.connect();
         connectors.push({ stop: async () => { await conn.disconnect(); } });
       } catch (e: any) {
@@ -225,7 +252,8 @@ export async function startChannelRunners(opts: ChannelRunnerOpts): Promise<Chan
           approvedPairings: [],
           pairingBridge,
           listenGuildIds: listenGuildIds.filter(Boolean),
-          requireMentionInGuild: requireMentionInGuild === false ? false : true
+          requireMentionInGuild: requireMentionInGuild === false ? false : true,
+          autoArchiveDuration: chCfg?.autoArchiveDuration != null ? chCfg.autoArchiveDuration : undefined
         });
         conn.on('message', (msg: { chatId: string; text: string; isDM?: boolean }) => handleMsg(msg, wrap(conn as any), 'discord'));
         await conn.connect();

@@ -2,9 +2,23 @@
  * src/infra/destructive-gate.ts
  * Gating for destructive tools: require elevation (or main surface) unless confirmed.
  * Channels need elevated session for delete_file, kill_process, run_shell (dangerous patterns).
+ *
+ * Security: approval prompts sanitize invisible Unicode format characters (GHSA-pcqg-f7rg-xfvv)
+ * to prevent zero-width command spoofing.
  */
 
 import type { Tool } from '../../packages/core/src/agent/inference';
+
+// Regex matching Unicode format/invisible characters (Cf category + zero-width variants)
+const INVISIBLE_UNICODE_RE = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0]/gu;
+
+/**
+ * Escape invisible Unicode format characters to visible \u{...} escapes.
+ * Prevents zero-width characters from spoofing displayed commands in approval prompts.
+ */
+function sanitizeApprovalText(text: string): string {
+  return text.replace(INVISIBLE_UNICODE_RE, (ch) => `\\u{${ch.codePointAt(0)!.toString(16)}}`);
+}
 
 const DESTRUCTIVE_TOOLS = ['delete_file', 'kill_process'];
 
@@ -35,7 +49,12 @@ const CHANNEL_SOURCES = new Set([
 ]);
 
 const BLOCKED_MSG = 'Blocked: destructive action requires elevated session. Use "elevate" or run from CLI with full access.';
-const PENDING_MSG = 'This action requires confirmation. Ask the user to reply "confirm" to proceed.';
+
+function buildPendingMsg(toolName: string, cmd?: string): string {
+  const safeTool = sanitizeApprovalText(toolName);
+  const cmdInfo = cmd ? ` Command: \`${sanitizeApprovalText(cmd)}\`` : '';
+  return `This action requires confirmation. Tool: \`${safeTool}\`.${cmdInfo} Reply "confirm" to proceed.`;
+}
 
 export interface DestructiveGateOpts {
   elevated: boolean;
@@ -68,7 +87,7 @@ export function applyDestructiveGate(tools: Tool[], opts: DestructiveGateOpts): 
               input,
               execute: () => orig(input)
             });
-            return PENDING_MSG;
+            return buildPendingMsg(t.name);
           }
           return BLOCKED_MSG;
         }
@@ -84,7 +103,7 @@ export function applyDestructiveGate(tools: Tool[], opts: DestructiveGateOpts): 
             if (sessionId) {
               const { setPending } = await import('./pending-approval');
               setPending(sessionId, { toolName: 'run_shell', input, execute: () => orig(input) });
-              return PENDING_MSG;
+              return buildPendingMsg('run_shell', cmd);
             }
             return BLOCKED_MSG;
           }

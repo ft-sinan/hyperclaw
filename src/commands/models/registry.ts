@@ -110,6 +110,35 @@ export const PROVIDERS: Provider[] = [
     ]
   },
   {
+    id: 'vercel',
+    displayName: 'Vercel AI Gateway',
+    authType: 'api_key',
+    authLabel: 'Vercel API key',
+    authHint: 'Get at vercel.com/account/tokens',
+    baseUrl: 'https://ai-gateway.vercel.sh/v1',
+    models: [
+      { id: 'vercel/claude-sonnet-4-5', displayName: 'Claude Sonnet 4.5 (via Vercel)', contextK: 200, vision: true, recommended: true },
+      { id: 'vercel/gpt-4o', displayName: 'GPT-4o (via Vercel)', contextK: 128, vision: true },
+      { id: 'vercel/gemini-2.0-flash', displayName: 'Gemini 2.0 Flash (via Vercel)', contextK: 1000, vision: true },
+      { id: 'vercel/llama-3.3-70b', displayName: 'Llama 3.3 70B (via Vercel)', contextK: 128 },
+      { id: 'vercel/deepseek-v3', displayName: 'DeepSeek V3 (via Vercel)', contextK: 64 },
+    ]
+  },
+  {
+    id: 'glm',
+    displayName: 'GLM / ChatGLM (Zhipu AI)',
+    authType: 'api_key',
+    authLabel: 'Zhipu AI API key',
+    authHint: 'Get at open.bigmodel.cn',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    models: [
+      { id: 'glm-4-plus', displayName: 'GLM-4 Plus', contextK: 128, vision: true, recommended: true },
+      { id: 'glm-4-flash', displayName: 'GLM-4 Flash', contextK: 128 },
+      { id: 'glm-4v-plus', displayName: 'GLM-4V Plus (vision)', contextK: 64, vision: true },
+      { id: 'glm-z1-air', displayName: 'GLM-Z1 Air (reasoning)', contextK: 32, reasoning: true },
+    ]
+  },
+  {
     id: 'local',
     displayName: 'Local (Ollama / llama.cpp)',
     authType: 'none',

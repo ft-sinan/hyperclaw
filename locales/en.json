@@ -1,0 +1,20 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "back": "Back"
+  },
+  "chat": {
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "newChat": "New chat",
+    "clear": "Clear"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "online": "Online",
+    "offline": "Offline"
+  }
+}

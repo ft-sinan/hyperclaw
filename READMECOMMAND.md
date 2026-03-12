@@ -12,6 +12,8 @@
 
 All HyperClaw CLI commands with explanations of what they do.
 
+**Global options** (any command): `--profile <name>` — use isolated gateway profile (e.g. `hyperclaw --profile rescue gateway`). `-V, --version`, `-h, --help`.
+
 ---
 
 ## Setup & Init
@@ -19,7 +21,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | Command | Description |
 |---------|-------------|
 | `hyperclaw init` | Runs the interactive setup wizard. Options: `-a --auto-config`, `-d --daemon`, `-s --start-now`. |
-| `hyperclaw onboard` | Full onboarding wizard — preferred setup path. Options: `--install-daemon`, `--quick`, `--reset`, `--non-interactive`, `--json`. |
+| `hyperclaw onboard` | Full onboarding wizard — preferred setup path. Options: `--install-daemon`, `--quick`, `--reset`, `--reset-scope config|config+creds|full`, `--non-interactive`, `--json`, `--anthropic-api-key`, `--openai-api-key`, `--gateway-port`, `--gateway-bind`, `--daemon-runtime`, `--skip-skills`, `--skip-search`. |
 | `hyperclaw quickstart` | Zero-config quick start. Options: `-c --channels`, `-v --voice`. |
 | `hyperclaw setup` | Manage basic settings (alias for onboard). |
 
@@ -29,13 +31,13 @@ All HyperClaw CLI commands with explanations of what they do.
 
 | Command | Description |
 |---------|-------------|
-| `hyperclaw gateway status` | Shows gateway status (port, running/stopped). |
-| `hyperclaw gateway start` | Starts the gateway (runs in this terminal). |
-| `hyperclaw gateway stop` | Stops the gateway. |
-| `hyperclaw gateway restart` | Restarts the gateway. |
-| `hyperclaw gateway config` | Configure: `--set-token`, `--regenerate-token`, `--set-port`, `--set-bind`. |
-| `hyperclaw daemon <action>` | Manage daemon: `start` \| `stop` \| `restart` \| `status` \| `logs` \| `install` \| `uninstall`. The `start` action runs the gateway with red banner. |
-| `hyperclaw gateway:serve` | Internal command — starts the gateway server (used by daemon). |
+| `hyperclaw gateway status` | Show gateway status (port, running/stopped). |
+| `hyperclaw gateway start` | Start the gateway (foreground). |
+| `hyperclaw gateway stop` | Stop the gateway. |
+| `hyperclaw gateway restart` | Restart the gateway. |
+| `hyperclaw gateway config` | Configure gateway. Options: `--set-token`, `--regenerate-token`, `--set-port <port>`, `--set-bind <addr>`. |
+| `hyperclaw daemon <action>` | Manage daemon: `start` \| `stop` \| `restart` \| `status` \| `logs` \| `install` \| `uninstall`. |
+| `hyperclaw gateway:serve` | Internal — start gateway server (used by daemon). |
 
 ---
 
@@ -80,7 +82,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | `hyperclaw pairing list [channel]` | Show pending DM pairing requests. |
 | `hyperclaw pairing approve <channel> <code>` | Approve a pairing code and add the user to the allowlist. |
 | `hyperclaw devices list` | List pending and paired devices. |
-| `hyperclaw devices pair` | Create a new pairing request and show the setup code. |
+| `hyperclaw devices pair` | Create a new pairing request and show the setup code. Options: `-u --gateway-url`, `-n --name`. |
 | `hyperclaw devices approve <requestId>` | Approve a pairing request. |
 | `hyperclaw devices reject <requestId>` | Reject a pairing request. |
 | `hyperclaw devices unpair <deviceId>` | Remove a paired device. |
@@ -91,10 +93,15 @@ All HyperClaw CLI commands with explanations of what they do.
 
 | Command | Description |
 |---------|-------------|
-| `hyperclaw hub` | Opens the Skill Hub — marketplace, browse, install, scan. |
-| `hyperclaw skill search [query]` | Search ClawHub. |
-| `hyperclaw skill list` | List installed skills. |
-| `hyperclaw skill install <id>` | Install a skill from ClawHub. |
+| `hyperclaw hub` | Browse Skill Hub — curated marketplace. |
+| `hyperclaw hub search [query]` | Search skills (ClawHub + community registry + bundled). Options: `-c --category`. |
+| `hyperclaw hub install <id>` | Install skill. Options: `-v --version`, `--force`. |
+| `hyperclaw hub list` | List installed skills. |
+| `hyperclaw hub scan <id>` | Security scan a skill. |
+| `hyperclaw hub marketplace` | Full marketplace view. Options: `--hide-suspicious`. |
+| `hyperclaw skill search [query]` | Alias for hub search. |
+| `hyperclaw skill list` | Alias for hub list. |
+| `hyperclaw skill install <id>` | Alias for hub install. Options: `-v --version`, `--force`. |
 
 ---
 
@@ -104,11 +111,24 @@ All HyperClaw CLI commands with explanations of what they do.
 |---------|-------------|
 | `hyperclaw memory show` | Show AGENTS.md, MEMORY.md, SOUL.md. |
 | `hyperclaw memory add-rule <rule>` | Add a rule to AGENTS.md. |
-| `hyperclaw memory add-fact <fact>` | Add a fact to memory. |
-| `hyperclaw memory search <query>` | Search memory. |
+| `hyperclaw memory add-fact <fact>` | Add a fact to memory (and vector DB when memory-lancedb available). |
+| `hyperclaw memory add-image <path>` | Add image to multimodal vector memory. Options: `-c --caption`. Requires gemini + GOOGLE_AI_API_KEY. |
+| `hyperclaw memory add-audio <path>` | Add audio to multimodal vector memory. Options: `-t --transcript`. Requires gemini + GOOGLE_AI_API_KEY. |
+| `hyperclaw memory search <query>` | Text search memory. |
+| `hyperclaw memory search-vector <query>` | Semantic search (requires memory-lancedb). Options: `-n --limit`. |
 | `hyperclaw memory auto-show` | Show auto-extracted memory. |
 | `hyperclaw memory clear` | Clear memory. |
 | `hyperclaw memory save <text>` | Save text to memory. |
+
+---
+
+## Backup
+
+| Command | Description |
+|---------|-------------|
+| `hyperclaw backup create` | Create timestamped backup. Options: `-o --output <dir>`. |
+| `hyperclaw backup verify <dir>` | Verify backup integrity. |
+| `hyperclaw backup restore <dir>` | Restore from backup. Options: `-y --yes`. |
 
 ---
 
@@ -126,7 +146,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | `hyperclaw secrets reload` | Reload secrets into the running gateway. |
 | `hyperclaw secrets remove <key>` | Remove a secret. |
 | `hyperclaw secrets credentials` | List credential files. |
-| `hyperclaw auth add <service_id>` | Add API key for a service. |
+| `hyperclaw auth add <service_id>` | Add API key for a service. Options: `--key`, `--base-url`, `--env-var`. |
 | `hyperclaw auth remove <service_id>` | Remove API key. |
 | `hyperclaw auth oauth <provider>` | OAuth flow (google, microsoft, etc.). |
 | `hyperclaw auth setup-token <provider>` | Set setup token. |
@@ -157,6 +177,8 @@ All HyperClaw CLI commands with explanations of what they do.
 
 | Command | Description |
 |---------|-------------|
+| `hyperclaw acp` | Start ACP server on stdio (IDE integration: VS Code, Cursor, Codex). |
+| `hyperclaw threads create` | Create or resume an ACP thread. Options: `--resume <id>`, `--name <name>`, `--channel <id>`. |
 | `hyperclaw threads list` | List agent threads. |
 | `hyperclaw threads terminate <id>` | Terminate a thread. |
 | `hyperclaw canvas show` | Show current canvas components. |
@@ -178,6 +200,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | `hyperclaw node add` | Add / pair a node. |
 | `hyperclaw node probe [id]` | Probe a node. |
 | `hyperclaw node remove <id>` | Remove a node. |
+| `hyperclaw node queue [nodeId]` | List pending work queued for dormant nodes. |
 | `hyperclaw nodes` | List connected mobile nodes (iOS/Android Connect). |
 
 ---
@@ -200,9 +223,9 @@ All HyperClaw CLI commands with explanations of what they do.
 | Command | Description |
 |---------|-------------|
 | `hyperclaw cron list` | List scheduled tasks. |
-| `hyperclaw cron add <schedule> <prompt>` | Add a cron task. |
+| `hyperclaw cron add <schedule> <prompt>` | Add a cron task. Options: `-n --name`, `-s --skill <skillId>`. |
 | `hyperclaw cron remove <id>` | Remove a cron task. |
-| `hyperclaw gmail watch-setup` | Set up Gmail Pub/Sub for push. |
+| `hyperclaw gmail watch-setup` | Set up Gmail Pub/Sub for push. Required: `-t --topic <name>`. Options: `-l --labels <ids>`. |
 | `hyperclaw auto-reply list` | List auto-reply rules. |
 | `hyperclaw auto-reply toggle <id>` | Toggle a rule. |
 | `hyperclaw auto-reply remove <id>` | Remove a rule. |
@@ -234,7 +257,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | `hyperclaw pc run <command>` | Run a command (CLI test). |
 | `hyperclaw bot status` | HyperClaw Bot status. |
 | `hyperclaw bot setup` | Set up HyperClaw Bot. |
-| `hyperclaw bot start` | Start the bot (background). |
+| `hyperclaw bot start` | Start the bot. Options: `--background`. |
 | `hyperclaw bot stop` | Stop the bot. |
 
 ---
@@ -243,18 +266,19 @@ All HyperClaw CLI commands with explanations of what they do.
 
 | Command | Description |
 |---------|-------------|
-| `hyperclaw message send` | Send a message via a channel. Options: `-t --to`, `-m --message`, `-c --channel`. |
-| `hyperclaw menu-bar` | Launch the macOS menu bar app. |
-| `hyperclaw update` | Update HyperClaw. |
-| `hyperclaw deploy` | Deploy helpers (Docker, fly.io, etc.). |
-| `hyperclaw osint [workflow]` | OSINT / Ethical Hacking mode. Presets: recon, bugbounty, pentest, footprint, custom, chat. |
-| `hyperclaw developer-key create` | Create a developer API key. |
+| `hyperclaw message send` | Send a message via channel. Options: `-t --to`, `-m --message`, `-c --channel`, `--session`. |
+| `hyperclaw menu-bar` | Launch macOS menu bar companion. |
+| `hyperclaw update` | Update HyperClaw. Options: `-c --channel stable|beta|dev`. |
+| `hyperclaw deploy` | One-click deploy (Fly.io, Render, Railway). Options: `-p --platform fly|render|railway`, `--dry-run`. |
+| `hyperclaw osint [workflow]` | OSINT / Ethical Hacking mode. Presets: recon, bugbounty, pentest, footprint, custom, chat, setup. Options: `--show`, `--reset`, `--model`. |
+| `hyperclaw developer-key create` | Create developer API key. |
 | `hyperclaw developer-key list` | List developer keys. |
 | `hyperclaw developer-key revoke <id>` | Revoke a developer key. |
 | `hyperclaw agents bindings` | Show agent bindings. |
 | `hyperclaw agents bind` | Interactive agent binding. |
 | `hyperclaw agents unbind` | Unbind an agent. |
-| `hyperclaw sandbox explain` | Show effective sandbox mode and tool policy. |
+| `hyperclaw sandbox explain` | Show effective sandbox mode and tool policy. Options: `--json`. |
+| `hyperclaw logs` | View gateway logs. Options: `-n --lines`, `-f --follow`. |
 
 ---
 
@@ -276,7 +300,7 @@ The gateway’s built-in chat at `http://localhost:18789/chat` uses the static H
 
 ---
 
-## Web UI & Terminal API (v5.4.0+)
+## Web UI & Terminal API (v5.4.1+)
 
 - **Web UI**: After `hyperclaw gateway` or `hyperclaw daemon start`, open `http://localhost:18789` (or your gateway port). Dashboard, Chat with New chat / Clear messages, and **Local terminal** panel below the chat — with Build, Install, Test, Doctor buttons.
 - **Terminal API**: `POST /api/terminal` with `{ "command": "npm run build" }` — runs a command in the gateway's cwd.

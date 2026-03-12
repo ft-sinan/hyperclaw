@@ -27,7 +27,19 @@ export interface TgMessage {
   reply_to_message?: TgMessage;
   entities?: Array<{ type: string; offset: number; length: number }>;
 }
-export interface TgUpdate { update_id: number; message?: TgMessage; edited_message?: TgMessage; }
+export interface TgInlineQuery {
+  id: string;
+  from: TgUser;
+  query: string;
+  offset?: string;
+  chat_type?: string;
+}
+export interface TgUpdate {
+  update_id: number;
+  message?: TgMessage;
+  edited_message?: TgMessage;
+  inline_query?: TgInlineQuery;
+}
 
 export interface TgSendOptions {
   parse_mode?: 'Markdown' | 'HTML';
@@ -45,6 +57,8 @@ export interface TelegramConfig {
   groupActivation?: 'mention' | 'always';
   /** Allowlist of group/supergroup chat IDs (numeric). Empty = respond in all groups. */
   groupAllowFrom?: string[];
+  /** Enable inline mode: @botname <query> in any chat. Requires BotFather /setinline. */
+  inlineMode?: boolean;
 }
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
@@ -148,8 +162,9 @@ export class TelegramConnector extends EventEmitter {
   private async pollLoop(): Promise<void> {
     while (this.running) {
       try {
+        const allowed = this.config.inlineMode ? ['message', 'inline_query'] : ['message'];
         const updates: TgUpdate[] = await tgRequest(this.token, 'getUpdates', {
-          offset: this.offset, timeout: 30, allowed_updates: ['message']
+          offset: this.offset, timeout: 30, allowed_updates: allowed
         });
         for (const u of updates) {
           this.offset = u.update_id + 1;
@@ -162,6 +177,15 @@ export class TelegramConnector extends EventEmitter {
   }
 
   private async handleUpdate(u: TgUpdate): Promise<void> {
+    if (u.inline_query) {
+      this.emit('inline_query', {
+        id: u.inline_query.id,
+        from: String(u.inline_query.from?.id),
+        query: u.inline_query.query,
+        username: u.inline_query.from?.username
+      });
+      return;
+    }
     const msg = u.message || u.edited_message;
     if (!msg) return;
     const text = msg.text?.trim() || '';
@@ -255,6 +279,25 @@ export class TelegramConnector extends EventEmitter {
 
   async sendTyping(chatId: number | string): Promise<void> {
     await tgRequest(this.token, 'sendChatAction', { chat_id: chatId, action: 'typing' }).catch(() => {});
+  }
+
+  /** Answer inline query (Telegram inline mode). Results shown when user types @botname &lt;query&gt; in any chat. */
+  async answerInlineQuery(
+    queryId: string,
+    results: Array<{ id: string; title: string; description?: string; message_text: string; parse_mode?: 'Markdown' | 'HTML' }>,
+    opts?: { cache_time?: number }
+  ): Promise<boolean> {
+    try {
+      const articles = results.map(r => ({
+        type: 'article',
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        input_message_content: { message_text: r.message_text, parse_mode: r.parse_mode || 'Markdown' }
+      }));
+      await tgRequest(this.token, 'answerInlineQuery', { inline_query_id: queryId, results: articles, cache_time: opts?.cache_time ?? 60 });
+      return true;
+    } catch { return false; }
   }
 
   approvePairing(code: string): boolean {

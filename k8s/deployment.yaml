@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hyperclaw-gateway
+  labels:
+    app: hyperclaw
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hyperclaw
+  template:
+    metadata:
+      labels:
+        app: hyperclaw
+    spec:
+      containers:
+        - name: hyperclaw
+          image: hyperclaw/gateway:latest
+          ports:
+            - containerPort: 18789
+          envFrom:
+            - configMapRef:
+                name: hyperclaw-config
+            - secretRef:
+                name: hyperclaw-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hyperclaw-gateway
+spec:
+  selector:
+    app: hyperclaw
+  ports:
+    - port: 18789
+      targetPort: 18789

@@ -92,6 +92,31 @@ export interface AgentToolPolicy {
   byProvider?: Record<string, { profile?: string; allow?: string[]; deny?: string[] }>;
 }
 
+/** Per-workflow / per-agent thinking override. */
+export type AgentThinkingOverride =
+  | 'off'
+  | 'standard'   // 8k budget
+  | 'extended'   // 32k budget
+  | { enabled: boolean; budgetTokens: number };
+
+const THINKING_BUDGET_MAP: Record<string, number> = {
+  off: 0, none: 0, standard: 8_000, extended: 32_000,
+  high: 10_000, medium: 4_000, low: 1_000
+};
+
+/** Resolve thinking budget (tokens) from agent override or request-level override. */
+export function resolveThinkingBudget(
+  agentThinking?: AgentThinkingOverride,
+  requestThinking?: 'high' | 'medium' | 'low' | 'none'
+): number {
+  const req = requestThinking ? THINKING_BUDGET_MAP[requestThinking] ?? 0 : undefined;
+  if (req !== undefined) return req;
+  if (!agentThinking || agentThinking === 'off') return 0;
+  if (typeof agentThinking === 'object')
+    return agentThinking.enabled ? agentThinking.budgetTokens : 0;
+  return THINKING_BUDGET_MAP[agentThinking] ?? 0;
+}
+
 /** A single agent definition in agents.list. */
 export interface AgentListItem {
   id: string;
@@ -103,6 +128,8 @@ export interface AgentListItem {
   default?: boolean;
   /** Provider/model override for this agent. */
   model?: string;
+  /** Per-agent thinking level override (for extended reasoning models). */
+  thinking?: AgentThinkingOverride;
   /** Per-agent sandbox config (overrides agents.defaults.sandbox). */
   sandbox?: AgentSandboxConfig;
   /** Per-agent tool policy (overrides global tools). */
@@ -293,13 +320,27 @@ export interface HyperClawConfig {
     apiKey?: string;
     voiceId?: string;
     modelId?: string;
+    /** Auto-send after N ms of silence (default 1500). Used by Talk Mode clients. */
+    silenceTimeoutMs?: number;
   };
   hatchMode?: string;
   updateChannel?: 'stable' | 'beta' | 'dev';
   rateLimit?: { maxPerMinute?: number; maxPerHour?: number };
   installedAt?: string;
 
+  /** Multi-user mode: separate contexts per user (planned). */
+  multiUser?: {
+    enabled?: boolean;
+    /** User ID → workspace path or agent override. */
+    users?: Record<string, { workspace?: string; agentId?: string }>;
+  };
+
   // ── Multi-agent ────────────────────────────────────────────────────────────
+
+  /** Remote HyperClaw instances for call_remote_agent tool. Keys = remote_id. */
+  multiAgent?: {
+    remotes?: Record<string, { url: string; token?: string }>;
+  };
 
   /** Named agent definitions and shared defaults. */
   agents?: AgentsConfig;

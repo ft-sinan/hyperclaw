@@ -203,6 +203,7 @@ hyperclaw dashboard
 | Chat from terminal (no Telegram needed) | `hyperclaw chat`           |
 | Run in foreground (no daemon)           | `hyperclaw start`          |
 | Health check                            | `hyperclaw doctor`         |
+| Backup local state                      | `hyperclaw backup create`  |
 
 ```bash
 # Send a single message (non-interactive)

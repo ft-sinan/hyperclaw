@@ -30,6 +30,19 @@
     <p class="hint">hyperclaw gateway config --regenerate-token</p>
   </section>
   <section>
+    <h2>Model &amp; Thinking</h2>
+    <label>Model ID (override)</label>
+    <input type="text" id="modelId" placeholder="e.g. claude-sonnet-4-5 or leave empty for default">
+    <label>Thinking level</label>
+    <select id="thinkingLevel" style="width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#fff;margin-bottom:12px">
+      <option value="none">None</option>
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+    <p class="hint">Model and thinking override for chat. Persisted across sessions.</p>
+  </section>
+  <section>
     <h2>Preferences</h2>
     <div class="row"><input type="checkbox" id="launchAtLogin"><label for="launchAtLogin" style="margin:0">Launch at login</label></div>
     <div class="row"><input type="checkbox" id="notifications" checked><label for="notifications" style="margin:0">Desktop notifications</label></div>
@@ -42,12 +55,16 @@
     (async () => {
       document.getElementById('url').value = await window.hyperclaw.store.get('gatewayUrl') || 'http://localhost:18789';
       document.getElementById('token').value = await window.hyperclaw.store.get('authToken') || '';
+      document.getElementById('modelId').value = await window.hyperclaw.store.get('modelId') || '';
+      document.getElementById('thinkingLevel').value = await window.hyperclaw.store.get('thinkingLevel') || 'none';
       document.getElementById('launchAtLogin').checked = await window.hyperclaw.store.get('launchAtLogin') || false;
       document.getElementById('notifications').checked = await window.hyperclaw.store.get('notifications') !== false;
     })();
     document.getElementById('save').onclick = async () => {
       await window.hyperclaw.store.set('gatewayUrl', document.getElementById('url').value.trim() || 'http://localhost:18789');
       await window.hyperclaw.store.set('authToken', document.getElementById('token').value);
+      await window.hyperclaw.store.set('modelId', document.getElementById('modelId').value.trim());
+      await window.hyperclaw.store.set('thinkingLevel', document.getElementById('thinkingLevel').value || 'none');
       await window.hyperclaw.store.set('launchAtLogin', document.getElementById('launchAtLogin').checked);
       await window.hyperclaw.store.set('notifications', document.getElementById('notifications').checked);
       window.hyperclaw.send('settings:saved');

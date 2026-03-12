@@ -498,32 +498,111 @@ class VoiceWake: ObservableObject {
     }
 }
 
+// MARK: - Home Tab (welcome + live agent overview)
+
+struct HomeTab: View {
+    @ObservedObject var gateway: GatewayConnection
+    @ObservedObject var discovery: GatewayDiscovery
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Text("🦅")
+                        .font(.system(size: 64))
+                    Text("HyperClaw")
+                        .font(.title.bold())
+                        .foregroundColor(.primary)
+                    Text("Your AI gateway assistant")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    VStack(spacing: 12) {
+                        HStack {
+                            Circle().fill(gateway.connected ? Color.cyan : Color.red).frame(width: 12, height: 12)
+                            Text(gateway.connected ? "Connected" : "Disconnected")
+                                .font(.headline)
+                                .foregroundColor(gateway.connected ? .cyan : .secondary)
+                        }
+                        Text(gateway.agentName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text(gateway.gatewayURL)
+                            .font(.caption)
+                            .foregroundColor(.tertiaryLabel)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    Text("Quick actions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        Button { selectedTab = 1 } label: {
+                            Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.cyan)
+                        Button { selectedTab = 2 } label: {
+                            Label("Voice", systemImage: "mic.fill")
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        }
+                        .buttonStyle(.bordered)
+                        Button { selectedTab = 0 } label: {
+                            Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        }
+                        .buttonStyle(.bordered)
+                        Button { selectedTab = 3 } label: {
+                            Label("Canvas", systemImage: "square.grid.3x3.fill")
+                                .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(24)
+            }
+            .navigationTitle("Home")
+        }
+    }
+}
+
 // MARK: - Main Tabs
 
 struct ContentView: View {
     @StateObject private var gateway = GatewayConnection()
     @StateObject private var discovery = GatewayDiscovery()
     @StateObject private var voice = VoiceWake()
-    @State private var selectedTab = 1
+    @State private var selectedTab = 0
     @State private var showSettings = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            HomeTab(gateway: gateway, discovery: discovery, selectedTab: $selectedTab)
+                .tabItem { Label("Home", systemImage: "house.fill") }
+                .tag(0)
+
             ConnectTab(gateway: gateway, discovery: discovery)
                 .tabItem { Label("Connect", systemImage: "antenna.radiowaves.left.and.right") }
-                .tag(0)
+                .tag(1)
 
             ChatTab(gateway: gateway)
                 .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }
-                .tag(1)
+                .tag(2)
 
             VoiceTab(gateway: gateway, voice: voice)
                 .tabItem { Label("Voice", systemImage: "mic.fill") }
-                .tag(2)
+                .tag(3)
 
             CanvasTab(gateway: gateway)
                 .tabItem { Label("Canvas", systemImage: "square.grid.3x3.fill") }
-                .tag(3)
+                .tag(4)
         }
         .preferredColorScheme(.dark)
         .navigationTitle("🦅 HyperClaw")
@@ -535,7 +614,7 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) { SettingsView(gateway: gateway) }
         .onAppear {
             discovery.startDiscovery()
-            if gateway.gatewayURL.contains("localhost") || gateway.gatewayURL.contains("127.0.0.1") {
+            if gateway.gatewayURL.contains("localhost") || gateway.gatewayURL.contains("127.0.0.1") || gateway.gatewayURL.contains("0.0.0.0") {
                 // On device, try discovered gateways first
                 if let first = discovery.discovered.first {
                     gateway.connect(url: first.url)

@@ -17,7 +17,8 @@
  *   hyperclaw doctor [--fix]
  *   hyperclaw health [-v] [--json]
  *   hyperclaw status [--all] [--deep]
- *   hyperclaw memory show/add-rule/add-fact
+ *   hyperclaw backup create/verify/restore
+ *   hyperclaw memory show/add-rule/add-fact/search-vector
  *   hyperclaw config show/set-key/schema
  *   hyperclaw voice
  *   hyperclaw dashboard
@@ -52,8 +53,24 @@ import {
   getStoredChannel,
   performUpdate
 } from '../infra/update-channels';
+
 import { AuthStore } from '../infra/device-auth-store';
 import * as developerKeys from '../infra/developer-keys';
+
+function getGitShortHash(): string {
+  try {
+    const { execSync } = require('child_process');
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString().trim();
+  } catch {
+    return '';
+  }
+}
+
+const cliVersion = (() => {
+  const h = getGitShortHash();
+  return h ? `5.4.1+${h}` : '5.4.1';
+})();
 
 // H9: Global handlers so unhandled promise rejections log and exit with code 1
 process.on('unhandledRejection', (reason: unknown) => {
@@ -77,7 +94,7 @@ const program = new Command();
 program
   .name('hyperclaw')
   .description('⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅')
-  .version('5.4.0')
+  .version(cliVersion)
   .option(
     '--profile <name>',
     'Use an isolated gateway profile. Auto-scopes HYPERCLAW_STATE_DIR and HYPERCLAW_CONFIG_PATH. ' +
@@ -85,33 +102,39 @@ program
     'Example: hyperclaw --profile rescue gateway --port 19001'
   )
   .addHelpText('after', `
-  Full commands reference: READMECOMMAND.md (all commands and options)
+  Full reference: READMECOMMAND.md (all commands + options)
 
-  Main command groups:
-    ✓ init, onboard, quickstart, setup
-    ✓ gateway status|start|stop|restart, daemon start|stop|restart|status|logs
-    ✓ web — 🌐 React Web UI (auto npm install + dev server)
-    ✓ chat — 💬 terminal chat
-    ✓ agent -m "message"
-    ✓ channels list|add|remove|login|status
-    ✓ hooks list|enable|disable|info
-    ✓ pairing list|approve, devices list|pair|approve|reject|unpair
-    ✓ hub, skill search|list|install
-    ✓ memory show|add-rule|add-fact|search|clear|save
-    ✓ config show|set-key|schema, secrets audit|set|apply|reload
-    ✓ doctor [--fix], health, security audit
-    ✓ status, dashboard
-    ✓ threads list|terminate, canvas show|add|clear|export
-    ✓ mcp list|add|remove|probe, node list|add|probe|remove
-    ✓ cron list|add|remove, webhooks list|remove|toggle, logs
-    ✓ voice, theme list|set|preview, workspace init|show
-    ✓ pc status|enable|disable|log|run
-    ✓ bot status|setup|start|stop
-    ✓ auth add|remove|oauth|setup-token
-    ✓ osint [workflow], deploy, update, message send
+  Command groups:
+    init, onboard, quickstart, setup
+    gateway status|start|stop|restart|config, daemon start|stop|restart|status|logs|install|uninstall
+    web (--port, --skip-install), chat (--session, --model, --workspace)
+    agent -m "message" (--thinking, --model)
+    channels list|add|remove|login|status
+    hooks list|info|enable|disable|install
+    pairing list|approve, devices list|pair|approve|reject|unpair
+    hub, hub search [query], hub install <id>, hub list, hub scan <id>, hub marketplace
+    skill search|list|install (alias for hub)
+    memory show|add-rule|add-fact|add-image|add-audio|search|search-vector|auto-show|clear|save
+    backup create|verify <dir>|restore <dir>
+    config show|set-key|set-service-key|schema
+    secrets audit|set|apply|reload|remove|credentials
+    doctor [--fix], health, security audit
+    status (--all, --deep), dashboard
+    acp, threads create|list|terminate, canvas show|add|clear|export
+    mcp list|add|remove|probe [id], node list|add|probe [id]|remove|queue [nodeId]
+    nodes, delivery status|retry
+    cron list|add|remove (-s --skill), webhooks list|remove|toggle
+    gmail watch-setup, auto-reply list|toggle|remove
+    voice-call, voice, theme list|set|preview
+    workspace init|show, pc status|enable|disable|log|run
+    bot status|setup|start|stop
+    auth add|remove|oauth|setup-token|oauth-set
+    developer-key create|list|revoke
+    agents bindings|bind|unbind, sandbox explain
+    message send, deploy, update, osint [workflow], logs (--follow)
 
-  Examples: hyperclaw onboard | hyperclaw chat | hyperclaw gateway status
-  Run "hyperclaw" with no args for quick actions, or see READMECOMMAND.md for full list.`)
+  Examples: hyperclaw onboard | hyperclaw chat | hyperclaw hub search
+  Full list: READMECOMMAND.md`)
   .hook('preAction', (thisCommand) => {
     // Apply --profile early so path resolution in all subcommands sees the correct dirs
     const profile = thisCommand.opts().profile as string | undefined;
@@ -533,27 +556,92 @@ msgCmd.command('send')
     process.exit(0);
   });
 
-// ─── SKILL HUB ───────────────────────────────────────────────────────────────
+// ─── SKILL HUB (marketplace) ─────────────────────────────────────────────────
 
-program.command('hub')
-  .description('Skill hub — browse marketplace, install, scan skills')
-  .option('-i, --install <id>', 'Install skill')
-  .option('-s, --scan <id>', 'Security scan a skill')
-  .option('-m, --marketplace', 'ClawHub-style marketplace view (installed + bundled)')
-  .option('--force', 'Force install (bypass risk block)')
-  .option('--hide-suspicious', 'Hide suspicious/dangerous skills')
-  .action(async (opts) => {
+const hubCmd = program.command('hub').description('Skill marketplace — browse, search, install community skills');
+hubCmd.command('search [query]')
+  .description('Search skills (ClawHub + bundled registry)')
+  .option('-c, --category <cat>', 'Filter by category')
+  .action(async (query, opts) => {
     const hub = new SkillHub();
-    if (opts.scan) await hub.scan(opts.scan);
-    else if (opts.install) await hub.install(opts.install, opts.force);
-    else if (opts.marketplace) await hub.showMarketplace({ hideSuspicious: opts.hideSuspicious });
-    else await hub.showHub(opts.hideSuspicious);
+    const q = query || '';
+    const skills = await hub.searchClawHub(q, opts.category);
+    if (skills.length === 0) {
+      console.log(chalk.gray(q ? `No skills found for "${q}"` : 'Browse: hyperclaw hub'));
+      process.exit(0);
+      return;
+    }
+    console.log(chalk.bold.hex('#06b6d4')('\n  Skill marketplace — search results:\n'));
+    for (const s of skills) {
+      const stars = '★'.repeat(Math.round(s.rating || 0)) + '☆'.repeat(5 - Math.round(s.rating || 0));
+      console.log(`  ${chalk.bold(s.name || s.id)}  ${chalk.gray(s.author || '')}  ${chalk.hex('#06b6d4')(stars)}  ${chalk.gray((s.downloads || 0).toLocaleString())} dl`);
+      console.log(`    ${chalk.gray(s.description || '')}`);
+      console.log(`    ${chalk.hex('#06b6d4')('hyperclaw hub install ' + (s.id || s.name))}\n`);
+    }
     process.exit(0);
   });
+hubCmd.command('install <id>')
+  .description('Install skill from registry (or bundled)')
+  .option('-v, --version <ver>', 'Pin version')
+  .option('--force', 'Force install (bypass risk block)')
+  .action(async (id, opts) => {
+    const hub = new SkillHub();
+    const ora = (await import('ora')).default;
+    const s = ora(`Installing ${id}...`).start();
+    try {
+      const dest = await hub.installFromClawHub(id, opts.version);
+      s.succeed(`Installed to ${dest}`);
+    } catch (e: any) {
+      const match = SKILL_REGISTRY.find((x: { id: string }) => x.id === id);
+      if (match) {
+        await hub.install(id, !!opts?.force);
+        s.succeed(`Installed bundled skill: ${match.name}`);
+      } else {
+        s.fail(e.message);
+      }
+    }
+    process.exit(0);
+  });
+hubCmd.command('list')
+  .description('List installed skills')
+  .action(async () => {
+    const hub = new SkillHub();
+    const installed = await hub.getInstalled();
+    console.log(chalk.bold.hex('#06b6d4')('\n  Installed skills:\n'));
+    for (const s of installed) {
+      const src = SKILL_REGISTRY.some(r => r.id === s.id) ? '' : ' (registry)';
+      console.log(`  ${chalk.hex('#06b6d4')('✓')} ${s.name} ${chalk.gray(`(${s.id})${src}`)}`);
+    }
+    if (installed.length === 0) {
+      console.log(chalk.gray('  No skills installed. Run: hyperclaw hub search <query>  or  hyperclaw hub\n'));
+    } else console.log();
+    process.exit(0);
+  });
+hubCmd.command('scan <id>')
+  .description('Security scan a skill')
+  .action(async (id) => {
+    const hub = new SkillHub();
+    await hub.scan(id);
+    process.exit(0);
+  });
+hubCmd.command('marketplace')
+  .description('Browse marketplace (installed + bundled)')
+  .option('--hide-suspicious', 'Hide suspicious/dangerous')
+  .action(async (opts) => {
+    const hub = new SkillHub();
+    await hub.showMarketplace({ hideSuspicious: opts.hideSuspicious });
+    process.exit(0);
+  });
+hubCmd.option('--hide-suspicious', 'Hide suspicious skills');
+hubCmd.action(async (opts) => {
+  const hub = new SkillHub();
+  await hub.showHub(opts?.hideSuspicious);
+  process.exit(0);
+});
 
-// ─── SKILL (ClawHub) ─────────────────────────────────────────────────────────
+// ─── SKILL (aliases to hub) ─────────────────────────────────────────────────
 
-const skillCmd = program.command('skill').description('ClawHub — search and install skills from registry');
+const skillCmd = program.command('skill').description('Skills — alias for hyperclaw hub (search, install, list)');
 skillCmd.command('search [query]')
   .description('Search ClawHub for skills')
   .option('-c, --category <cat>', 'Filter by category')
@@ -908,9 +996,116 @@ memCmd.command('add-rule <rule>')
   .description('Append a global rule to AGENTS.md')
   .action(async (rule) => { await (new MemoryManager()).appendRule(rule); process.exit(0); });
 
+memCmd.command('add-image <path>')
+  .description('Add image to multimodal vector memory (requires memory-lancedb + embeddingProvider: gemini + GOOGLE_AI_API_KEY)')
+  .option('-c, --caption <text>', 'Caption for the image')
+  .action(async (imagePath, opts) => {
+    try {
+      const pkg: string = '@hyperclaw/memory-lancedb';
+      const mod = await (async () => { try { return await import(pkg as any); } catch { return null; } })();
+      if (!mod?.VectorMemoryService) throw new Error('Install: npm install @hyperclaw/memory-lancedb vectordb');
+      const cfg = await (new ConfigManager()).load();
+      const apiKey = process.env.GOOGLE_AI_API_KEY ?? (cfg?.provider?.providerId === 'google' ? cfg?.provider?.apiKey : undefined);
+      if (!apiKey) throw new Error('GOOGLE_AI_API_KEY required for image indexing');
+      const path = await import('path');
+      const { getHyperClawDir } = await import('../infra/paths');
+      const svc = new mod.VectorMemoryService({
+        dbPath: path.join(getHyperClawDir(), 'memory-lancedb'),
+        apiKey,
+        embeddingProvider: 'gemini'
+      });
+      await svc.addImage(imagePath, opts.caption);
+      console.log(chalk.green(`\n  ✓ Image indexed: ${imagePath}\n`));
+    } catch (e) {
+      console.log(chalk.yellow(`\n  ${(e as Error).message}\n`));
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
+memCmd.command('add-audio <path>')
+  .description('Add audio to multimodal vector memory (requires memory-lancedb + embeddingProvider: gemini + GOOGLE_AI_API_KEY)')
+  .option('-t, --transcript <text>', 'Transcript for the audio')
+  .action(async (audioPath, opts) => {
+    try {
+      const pkg: string = '@hyperclaw/memory-lancedb';
+      const mod = await (async () => { try { return await import(pkg as any); } catch { return null; } })();
+      if (!mod?.VectorMemoryService) throw new Error('Install: npm install @hyperclaw/memory-lancedb vectordb');
+      const cfg = await (new ConfigManager()).load();
+      const apiKey = process.env.GOOGLE_AI_API_KEY ?? (cfg?.provider?.providerId === 'google' ? cfg?.provider?.apiKey : undefined);
+      if (!apiKey) throw new Error('GOOGLE_AI_API_KEY required for audio indexing');
+      const path = await import('path');
+      const { getHyperClawDir } = await import('../infra/paths');
+      const svc = new mod.VectorMemoryService({
+        dbPath: path.join(getHyperClawDir(), 'memory-lancedb'),
+        apiKey,
+        embeddingProvider: 'gemini'
+      });
+      await svc.addAudio(audioPath, opts.transcript);
+      console.log(chalk.green(`\n  ✓ Audio indexed: ${audioPath}\n`));
+    } catch (e) {
+      console.log(chalk.yellow(`\n  ${(e as Error).message}\n`));
+      process.exit(1);
+    }
+    process.exit(0);
+  });
+
 memCmd.command('add-fact <fact>')
-  .description('Add a fact to MEMORY.md')
-  .action(async (fact) => { await (new MemoryManager()).addMemory(fact); process.exit(0); });
+  .description('Add a fact to MEMORY.md (and vector DB when memory-lancedb is available)')
+  .action(async (fact) => {
+    let vectorStore: { addMemory: (t: string) => Promise<void> } | undefined;
+    try {
+      const pkg: string = '@hyperclaw/memory-lancedb';
+      const mod = await (async () => { try { return await import(pkg as any); } catch { return null; } })();
+      const VectorMemoryService = mod?.VectorMemoryService;
+      const { getHyperClawDir } = await import('../infra/paths');
+      const path = await import('path');
+      if (!VectorMemoryService) throw new Error('not available');
+      const svc = new VectorMemoryService({ dbPath: path.join(getHyperClawDir(), 'memory-lancedb'), apiKey: (await (new ConfigManager()).load())?.provider?.apiKey });
+      await svc.init();
+      vectorStore = { addMemory: (t) => svc.addMemory(t) };
+    } catch { /* optional */ }
+    await (new MemoryManager()).addMemory(fact, vectorStore);
+    process.exit(0);
+  });
+
+// ─── BACKUP ──────────────────────────────────────────────────────────────────
+
+const backupCmd = program.command('backup').description('Backup and restore local HyperClaw state');
+backupCmd.command('create')
+  .description('Create a timestamped backup of hyperclaw.json, AGENTS.md, MEMORY.md, etc.')
+  .option('-o, --output <dir>', 'Output directory (default: ~/.hyperclaw/backups)')
+  .action(async (opts) => {
+    const { createBackup } = await import('../commands/backup');
+    const dir = await createBackup(opts.output);
+    console.log(chalk.green(`\n  ✓ Backup created: ${dir}\n`));
+    process.exit(0);
+  });
+backupCmd.command('verify <dir>')
+  .description('Verify backup integrity (checksums)')
+  .action(async (dir) => {
+    const { verifyBackup } = await import('../commands/backup');
+    const { ok, errors } = await verifyBackup(dir);
+    if (ok) console.log(chalk.green('\n  ✓ Backup OK\n'));
+    else console.log(chalk.red('\n  ✗ Errors:\n'), errors.map(e => '    ' + e).join('\n'), '\n');
+    process.exit(ok ? 0 : 1);
+  });
+backupCmd.command('restore <dir>')
+  .description('Restore from backup (overwrites local files)')
+  .option('-y, --yes', 'Skip confirmation')
+  .action(async (dir, opts) => {
+    const { restoreBackup } = await import('../commands/backup');
+    if (!opts.yes) {
+      console.log(chalk.yellow(`\n  This will overwrite files in ~/.hyperclaw. Confirm? (y/N) `));
+      const readline = (await import('readline')).createInterface({ input: process.stdin, output: process.stdout });
+      const line = await new Promise<string>(r => readline.question('', r));
+      readline.close();
+      if (line?.toLowerCase() !== 'y') { console.log(chalk.gray('\n  Aborted.\n')); process.exit(0); }
+    }
+    await restoreBackup(dir);
+    console.log(chalk.green('\n  ✓ Restored.\n'));
+    process.exit(0);
+  });
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 
@@ -1012,7 +1207,7 @@ cfgCmd.command('schema')
   .action(() => {
     console.log(chalk.bold.hex('#06b6d4')('\n  Config schema: ~/.hyperclaw/hyperclaw.json\n'));
     const schema = {
-      version: 'string (e.g. "5.4.0")',
+      version: 'string (e.g. "5.4.1")',
       workspaceName: 'string',
       provider: { providerId: 'string', apiKey: 'string (secret)', modelId: 'string' },
       gateway: { port: 'number', bind: '"127.0.0.1"|"0.0.0.0"|"tailscale"|"custom"', authToken: 'string (secret)', tailscaleExposure: '"off"|"serve"|"funnel"', runtime: '"node"|"bun"|"deno"' },
@@ -1065,14 +1260,14 @@ devKeyCmd.command('revoke <id>')
 // ─── DEPLOY (cloud hosting) ───────────────────────────────────────────────────
 
 program.command('deploy')
-  .description('Deploy gateway to cloud (Fly.io or Render)')
-  .option('-p, --platform <platform>', 'Platform: fly | render', 'fly')
+  .description('One-click deploy to cloud (Fly.io, Render, Railway)')
+  .option('-p, --platform <platform>', 'Platform: fly | render | railway', 'fly')
   .option('--dry-run', 'Show commands without running')
   .action(async (opts: { platform?: string; dryRun?: boolean }) => {
     const platform = (opts.platform ?? 'fly').toLowerCase();
     const dryRun = !!opts.dryRun;
     if (platform === 'fly') {
-      console.log(chalk.bold.hex('#06b6d4')('\n  Deploy to Fly.io\n'));
+      console.log(chalk.bold.hex('#06b6d4')('\n  🚀 Deploy to Fly.io\n'));
       if (dryRun) {
         console.log(chalk.gray('  Commands to run:'));
         console.log(chalk.gray('    fly launch   # first time'));
@@ -1093,12 +1288,21 @@ program.command('deploy')
         }
       }
     } else if (platform === 'render') {
-      console.log(chalk.bold.hex('#06b6d4')('\n  Deploy to Render\n'));
-      console.log(chalk.gray('  1. Push to GitHub and connect repo at https://render.com'));
-      console.log(chalk.gray('  2. New Web Service → use render.yaml'));
-      console.log(chalk.gray('  3. Set env: OPENROUTER_API_KEY, HYPERCLAW_GATEWAY_TOKEN\n'));
+      console.log(chalk.bold.hex('#06b6d4')('\n  🚀 Deploy to Render\n'));
+      console.log(chalk.gray('  1. Push to GitHub and connect at https://render.com'));
+      console.log(chalk.gray('  2. New Web Service → connect repo, use render.yaml'));
+      console.log(chalk.gray('  3. Environment: OPENROUTER_API_KEY, HYPERCLAW_GATEWAY_TOKEN'));
+      console.log(chalk.cyan('\n  One-click: https://render.com/deploy\n'));
+    } else if (platform === 'railway') {
+      console.log(chalk.bold.hex('#06b6d4')('\n  🚀 Deploy to Railway\n'));
+      console.log(chalk.gray('  1. Create project: https://railway.app/new'));
+      console.log(chalk.gray('  2. Deploy from GitHub or use Railway CLI:'));
+      console.log(chalk.gray('     npm i -g @railway/cli && railway login'));
+      console.log(chalk.gray('     railway init; railway add'));
+      console.log(chalk.gray('  3. Variables: OPENROUTER_API_KEY, HYPERCLAW_GATEWAY_TOKEN, PORT=18789'));
+      console.log(chalk.cyan('\n  One-click: https://railway.app/template (use Docker)\n'));
     } else {
-      console.log(chalk.red(`  Unknown platform: ${platform}. Use fly or render.\n`));
+      console.log(chalk.red(`  Unknown platform: ${platform}. Use fly, render, or railway.\n`));
       process.exit(1);
     }
     process.exit(0);
@@ -1452,6 +1656,23 @@ agentRunCmd
 
 const threadsCmd = program.command('threads').description('ACP thread-bound agent sessions');
 
+threadsCmd.command('create')
+  .description('Create or resume an ACP thread')
+  .option('--resume <id>', 'Resume existing session by thread ID (ACP resumeSessionId)')
+  .option('--name <name>', 'Thread name')
+  .option('--channel <id>', 'Channel ID')
+  .action(async (opts) => {
+    const { ACPThreadManager } = await import('hyperclaw/core');
+    const mgr = new ACPThreadManager();
+    const thread = await mgr.create({
+      resumeSessionId: opts.resume,
+      name: opts.name,
+      channelId: opts.channel
+    });
+    console.log(require('chalk').green(`\n  ✔  Thread: ${thread.name} (${thread.id})\n`));
+    process.exit(0);
+  });
+
 threadsCmd.command('list')
   .description('List agent threads')
   .option('--channel <id>', 'Filter by channel')
@@ -1474,6 +1695,16 @@ threadsCmd.command('terminate <id>')
     await (new ACPThreadManager()).terminate(id);
     console.log(require('chalk').green(`\n  ✔  Thread terminated: ${id}\n`));
     process.exit(0);
+  });
+
+// ─── ACP (Agent Client Protocol) ─────────────────────────────────────────────
+
+program.command('acp')
+  .description('Start ACP server on stdio for IDE integration (VS Code, Zed, Cursor, Codex)')
+  .action(async () => {
+    const { runACPStdio } = await import('hyperclaw/acp');
+    await runACPStdio();
+    // Server runs until stdin closes; no process.exit
   });
 
 // ─── CANVAS ──────────────────────────────────────────────────────────────────
@@ -1552,6 +1783,11 @@ nodeCmd.command('list').description('List paired nodes').action(async () => { co
 nodeCmd.command('add').description('Add or pair a node').action(async () => { const { nodeAdd } = await import('../commands/node'); await nodeAdd(); process.exit(0); });
 nodeCmd.command('probe [id]').description('Probe node connection').action(async (id) => { const { nodeProbe } = await import('../commands/node'); await nodeProbe(id); process.exit(0); });
 nodeCmd.command('remove <id>').description('Remove paired node').action(async (id) => { const { nodeRemove } = await import('../commands/node'); await nodeRemove(id); process.exit(0); });
+nodeCmd.command('queue [nodeId]').description('List pending work queued for dormant nodes').action(async (nodeId) => {
+  const { nodeQueue } = await import('../commands/node');
+  await nodeQueue(nodeId);
+  process.exit(0);
+});
 
 // ─── AUTO-REPLY ───────────────────────────────────────────────────────────────
 
@@ -1612,16 +1848,20 @@ cronCmd.command('list').action(async () => {
     console.log(`  ${dot} ${chalk.white(t.name || t.id)}`);
     console.log(`     ${chalk.gray('Schedule:')} ${t.schedule}`);
     console.log(`     ${chalk.gray('Prompt:')} ${t.prompt.slice(0, 60)}${t.prompt.length > 60 ? '...' : ''}`);
+    if (t.skillId) console.log(`     ${chalk.gray('Skill:')} ${t.skillId}`);
     if (t.lastRunAt) console.log(`     ${chalk.gray('Last run:')} ${t.lastRunAt}`);
     console.log();
   }
   process.exit(0);
 });
-cronCmd.command('add').arguments('<schedule> <prompt>').option('-n, --name <name>', 'Task name').action(async (schedule, prompt, opts) => {
+cronCmd.command('add').arguments('<schedule> <prompt>')
+  .option('-n, --name <name>', 'Task name')
+  .option('-s, --skill <skillId>', 'Skill ID to route task (e.g. morning-briefing)')
+  .action(async (schedule, prompt, opts) => {
   const chalk = require('chalk');
   const { loadCronTasks, addCronTask, saveCronTasks } = await import('../services/cron-tasks');
   await loadCronTasks();
-  addCronTask(schedule, prompt, opts.name);
+  addCronTask(schedule, prompt, opts.name, opts.skill);
   await saveCronTasks();
   console.log(chalk.green(`\n  ✔  Cron task added: ${schedule} → "${prompt.slice(0, 40)}..."\n`));
   console.log(chalk.gray('  Restart gateway to apply.\n'));
@@ -2122,8 +2362,36 @@ botCmd.command('stop')
 
 // ─── MEMORY (extended) ────────────────────────────────────────────────────────
 
+memCmd.command('search-vector <query>')
+  .description('Semantic search over vector memory (requires memory-lancedb + OPENAI_API_KEY)')
+  .option('-n, --limit <n>', 'Max results', '10')
+  .action(async (query, opts) => {
+    try {
+      const pkg: string = '@hyperclaw/memory-lancedb';
+      const mod = await (async () => { try { return await import(pkg as any); } catch { return null; } })();
+      if (!mod?.VectorMemoryService) throw new Error('not available');
+      const { VectorMemoryService } = mod;
+      const { getHyperClawDir } = await import('../infra/paths');
+      const path = await import('path');
+      const cfg = await (new ConfigManager()).load();
+      const svc = new VectorMemoryService({ dbPath: path.join(getHyperClawDir(), 'memory-lancedb'), apiKey: cfg?.provider?.apiKey });
+      await svc.init();
+      const results = await svc.search(query, parseInt(opts.limit));
+      if (results.length === 0) {
+        console.log(chalk.gray('\n  No results. Add facts with: hyperclaw memory add-fact "..."\n'));
+      } else {
+        console.log(chalk.bold.hex('#06b6d4')('\n  Vector memory search:\n'));
+        for (const r of results) console.log(chalk.gray(`  • ${r.text}`));
+        console.log();
+      }
+    } catch (e) {
+      console.log(chalk.yellow('\n  Vector memory not available. Install: npm install @hyperclaw/memory-lancedb vectordb openai\n'));
+    }
+    process.exit(0);
+  });
+
 memCmd.command('search <query>')
-  .description('Search MEMORY.md')
+  .description('Search MEMORY.md (text search)')
   .action(async (query) => {
     const { searchMemory } = await import('hyperclaw/core');
     await searchMemory(query);

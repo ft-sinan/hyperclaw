@@ -14,6 +14,7 @@ const PROVIDER_PREFIXES: Record<string, string> = {
   xai: 'xai-',
   tavily: 'tvly-',
   'opencode-zen': 'oc-',
+  'opencode-go': 'oc-',
   'vercel-ai': 'vercel_',
   groq: 'gsk_',
   perplexity: 'pplx-',
@@ -29,6 +30,7 @@ const MIN_LENGTH: Record<string, number> = {
   xai: 20,
   tavily: 20,
   'opencode-zen': 10,
+  'opencode-go': 10,
   'vercel-ai': 20,
   groq: 20,
 };

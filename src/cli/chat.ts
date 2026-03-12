@@ -30,11 +30,13 @@ function renderMarkdown(text: string): string {
 
 const DIVIDER = chalk.gray('  ' + '─'.repeat(56));
 
-function printHeader(model: string, sessionId: string): void {
+function printHeader(model: string, sessionId: string, agentName?: string): void {
   console.log();
   console.log(DIVIDER);
   console.log(chalk.bold.cyan('  🦅 HYPERCLAW CHAT'));
-  console.log(chalk.gray(`  Model: ${model}  ·  Session: ${sessionId}`));
+  const meta = [chalk.gray(`Model: ${model}`), chalk.gray(`Session: ${sessionId}`)];
+  if (agentName) meta.splice(1, 0, chalk.hex('#06b6d4')(`Agent: ${agentName}`));
+  console.log('  ' + meta.join('  ·  '));
   console.log(DIVIDER);
   console.log(chalk.gray('  Type your message and press Enter.'));
   console.log(chalk.gray('  Commands: /exit  /clear  /model  /prompt  /skill add|remove|list  /help'));
@@ -203,7 +205,12 @@ export async function runChat(opts: {
   const provider: 'anthropic' | 'openrouter' | 'custom' = isAnthropicVariant ? 'anthropic'
     : (cfg?.provider?.providerId === 'custom' || isLocal || CUSTOM_IDS.has(cfg?.provider?.providerId ?? '')) ? 'custom' : 'openrouter';
 
-  let rawModel = opts.model || cfg?.provider?.modelId || 'claude-sonnet-4-5';
+  // TUI agent inference: auto-detect agent from workspace (cwd)
+  const workspaceDir = opts.workspace || process.cwd();
+  const { inferAgentFromWorkspace } = await import('../routing/agents-routing');
+  const inferredAgent = inferAgentFromWorkspace(workspaceDir, cfg);
+
+  let rawModel = opts.model || inferredAgent?.model || cfg?.provider?.modelId || 'claude-sonnet-4-5';
   const model = rawModel.startsWith('ollama/') ? rawModel.slice(7) : rawModel;
   const resolvedBaseUrl = cfg?.provider?.baseUrl || providerMeta?.baseUrl || (isLocal ? 'http://localhost:11434/v1' : undefined);
 
@@ -260,7 +267,7 @@ export async function runChat(opts: {
     autoMem = new AutoMemory({ extractEveryNTurns: 3 });
   } catch {}
 
-  printHeader(rawModel, sessionId);
+  printHeader(rawModel, sessionId, inferredAgent?.name);
 
   // Interactive update check — prompt user before entering chat
   await interactiveChatUpdateCheck();

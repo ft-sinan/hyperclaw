@@ -437,6 +437,31 @@ export class HyperClawWizard {
           validate: (v: string) => v.trim().length > 10 || 'Required'
         }]);
         apiKey = r.apiKey.trim();
+      } else if (pid === 'ollama') {
+        // First-class Ollama: Local (ollama serve) vs Cloud (ollama.com API)
+        const { ollamaMode } = await inquirer.prompt([{
+          type: 'list',
+          name: 'ollamaMode',
+          message: '  Ollama mode:',
+          choices: [
+            { name: `Local   ${chalk.gray('(ollama serve on this machine — no API key)')}`, value: 'local' },
+            { name: `Cloud   ${chalk.gray('(ollama.com API — requires API key)')}`, value: 'cloud' }
+          ]
+        }]);
+        if (ollamaMode === 'local') {
+          baseUrl = 'http://localhost:11434/v1';
+          apiKey = ''; // no API key for local ollama
+          console.log(chalk.gray('  ● Run `ollama serve` and `ollama pull <model>` before use.\n'));
+        } else {
+          baseUrl = 'https://ollama.com/v1';
+          const r = await inquirer.prompt([{
+            type: 'password', name: 'apiKey',
+            message: '  Ollama Cloud API key (ollama.com/settings/keys):', mask: '●',
+            validate: (v: string) => v.trim().length > 10 || 'Required'
+          }]);
+          apiKey = r.apiKey.trim();
+          console.log(chalk.green('  ✔ Ollama Cloud configured\n'));
+        }
       } else if (provider.authType === 'api_key') {
         if (pid === 'custom') {
           const r = await inquirer.prompt([
@@ -1347,8 +1372,9 @@ export class HyperClawWizard {
       type: 'list', name: 'platform',
       message: '  Platform:',
       choices: [
-        { name: `Fly.io   ${chalk.gray('(recommended — fast global edge)')}`, value: 'fly' },
-        { name: `Render   ${chalk.gray('(free tier available — GitHub integration)')}`, value: 'render' },
+        { name: `Fly.io    ${chalk.gray('(recommended — fast global edge)')}`, value: 'fly' },
+        { name: `Render    ${chalk.gray('(free tier — GitHub integration)')}`, value: 'render' },
+        { name: `Railway   ${chalk.gray('(one-click — Docker/GitHub)')}`, value: 'railway' },
       ]
     }]);
 
@@ -1360,12 +1386,18 @@ export class HyperClawWizard {
       console.log(chalk.gray('  4. Secrets: fly secrets set ANTHROPIC_API_KEY=... HYPERCLAW_GATEWAY_TOKEN=...'));
       console.log(chalk.gray('  5. Deploy:  fly deploy'));
       console.log(chalk.gray('\n  Or: hyperclaw deploy --platform fly\n'));
-    } else {
+    } else if (platform === 'render') {
       console.log(chalk.gray('\n  Render deployment steps:'));
       console.log(chalk.gray('  1. Push to GitHub'));
       console.log(chalk.gray('  2. Connect at https://render.com > New Web Service > select repo'));
       console.log(chalk.gray('  3. Set env: ANTHROPIC_API_KEY, HYPERCLAW_GATEWAY_TOKEN'));
       console.log(chalk.gray('\n  Or: hyperclaw deploy --platform render\n'));
+    } else {
+      console.log(chalk.gray('\n  Railway deployment steps:'));
+      console.log(chalk.gray('  1. railway.app/new or: npm i -g @railway/cli && railway init'));
+      console.log(chalk.gray('  2. Deploy from GitHub or add Dockerfile'));
+      console.log(chalk.gray('  3. Variables: OPENROUTER_API_KEY, HYPERCLAW_GATEWAY_TOKEN, PORT=18789'));
+      console.log(chalk.gray('\n  Or: hyperclaw deploy --platform railway\n'));
     }
 
     await this.config.patch({ channelConfigs: { ...((await this.config.load()).channelConfigs || {}), deploy: { platform } } });
@@ -2432,7 +2464,7 @@ export class HyperClawWizard {
     ].join('\n');
 
     console.log('\n' + boxen(
-      chalk.hex('#06b6d4')('🦅 HyperClaw v5.4.0 ready!\n\n') + lines,
+      chalk.hex('#06b6d4')('🦅 HyperClaw v5.4.1 ready!\n\n') + lines,
       { padding: 1, borderStyle: 'round', borderColor: 'cyan', margin: 1, backgroundColor: '#0a0a0a' }
     ));
   }

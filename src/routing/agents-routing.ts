@@ -518,3 +518,24 @@ export class AgentRouter {
   getAgents(): AgentDef[] { return this.config.agents?.list ?? [defaultAgent()]; }
   getBindings(): AgentBinding[] { return this.config.bindings ?? []; }
 }
+
+/** Infer agent from workspace (TUI agent inference). Best match = longest workspace prefix. */
+export function inferAgentFromWorkspace(cwd: string, cfg: any): AgentDef | null {
+  const list = cfg?.agents?.list;
+  if (!Array.isArray(list) || list.length === 0) return null;
+  const resolvedCwd = path.resolve(cwd);
+  let best: AgentDef | null = null;
+  let bestLen = 0;
+  for (const a of list) {
+    const ws = (a as AgentDef).workspace;
+    if (!ws || typeof ws !== 'string') continue;
+    const resolvedWs = path.resolve(ws);
+    if (resolvedCwd === resolvedWs || resolvedCwd.startsWith(resolvedWs + path.sep)) {
+      if (resolvedWs.length > bestLen) {
+        bestLen = resolvedWs.length;
+        best = a as AgentDef;
+      }
+    }
+  }
+  return best;
+}

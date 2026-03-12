@@ -28,6 +28,8 @@ export interface AgentCallOpts {
   agentId?: string;
   /** Pre-computed session key (channel runner). Used for transcript restore/persist. */
   sessionKey?: string;
+  /** Per-request thinking level override: high|medium|low|none. Overrides agent.thinking. */
+  thinking?: 'high' | 'medium' | 'low' | 'none';
 }
 
 export interface GatewayDeps {
@@ -78,4 +80,6 @@ export interface GatewayDeps {
    * Injected to avoid gateway package importing src/infra (broken in published npm package).
    */
   restartDaemon?: () => Promise<void>;
+  /** Memory V2: called when a transcript turn is appended. Index into vector DB for semantic search. */
+  onTranscriptAppend?: (key: string, role: string, content: string) => void;
 }

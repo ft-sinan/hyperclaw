@@ -1,0 +1,20 @@
+{
+  "common": {
+    "ok": "确定",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "back": "返回"
+  },
+  "chat": {
+    "placeholder": "输入消息...",
+    "send": "发送",
+    "newChat": "新聊天",
+    "clear": "清除"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "online": "在线",
+    "offline": "离线"
+  }
+}

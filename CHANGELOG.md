@@ -16,6 +16,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [5.4.1] - 2026-03-12
+
+### Fixed
+- **Gateway hot-reload** — Switched to injected `restartDaemon` in `GatewayDeps` instead of dynamic import; gateway now restarts cleanly on config changes.
+- **Session store** — `enqueue` propagates errors; `readState` logs parse errors instead of failing silently.
+- **Windows daemon** — Correct script resolution using `flatScript`/`distScript` for Task Scheduler.
+- **PowerShell secrets** — Fixed escaping and newline handling for `.ps1` exports; Windows profile support.
+- **Dashboard** — Uses `require.main?.filename` to resolve run-main script path correctly.
+- **Gateway restart warning** — Emits warning when `restartDaemon` is missing and port/bind change requires restart.
+- **Emoji symbols** — Replaced incorrect `?` with ✔/✖/⚠/● in onboard, gateway MCP, and plugin hub messages.
+- **Deploy command parse error** — Fixed Railway CLI string (`&&` → `;`) that broke the build.
+
+---
+
 ## [5.4.0] - 2026-03-13
 
 ### Fixed

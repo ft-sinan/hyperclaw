@@ -364,7 +364,7 @@ export class GatewayServer {
 
     if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.4.0' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.4.1' }));
       return;
     }
 
@@ -591,9 +591,14 @@ export class GatewayServer {
 
           // Run in process cwd so "Build" / npm run build works when gateway is started from project root
           const cwd = process.cwd();
+          // Security: sanitize env — remove GIT_EXEC_PATH to prevent Git helper hijacking (GHSA-jf5v-pqgw-gm5m)
+          const safeEnv = { ...process.env };
+          delete safeEnv['GIT_EXEC_PATH'];
+          delete safeEnv['GIT_DIR'];
+          delete safeEnv['GIT_WORK_TREE'];
           const child = spawn(shell, args, {
             cwd,
-            env: process.env,
+            env: safeEnv,
           });
 
           let stdout = '';
@@ -642,10 +647,16 @@ export class GatewayServer {
           const { message } = parsed;
           const agentId: string | undefined = parsed.agentId;
           const sessionKey: string | undefined = parsed.sessionKey;
+          const thinking = parsed.thinking as 'high' | 'medium' | 'low' | 'none' | undefined;
+          const modelId: string | undefined = parsed.modelId;
           const source = (req.headers['x-hyperclaw-source'] as string) || 'unknown';
-          const response = await this.callAgent(message, { source, agentId, sessionKey });
-          res.writeHead(200);
-          res.end(JSON.stringify({ response }));
+          const response = await this.callAgent(message, { source, agentId, sessionKey, thinking, modelOverride: modelId });
+          const timestamp = new Date().toISOString();
+          const provenance = { agentId: agentId ?? null, sessionKey: sessionKey ?? null, source, timestamp };
+          res.setHeader('X-HyperClaw-Provenance-Source', source);
+          res.setHeader('X-HyperClaw-Provenance-Timestamp', timestamp);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ response, provenance }));
         } catch (e: any) {
           res.writeHead(500);
           res.end(JSON.stringify({ error: e.message }));
@@ -985,7 +996,13 @@ export class GatewayServer {
         this.send(session, { type: 'pong', ts: Date.now() });
         break;
       }
-      case 'talk:enable': session.talkMode = true; this.send(session, { type: 'talk:ok', enabled: true }); break;
+      case 'talk:enable': {
+        session.talkMode = true;
+        const cfg = this.loadConfig();
+        const silenceMs = cfg?.talkMode?.silenceTimeoutMs ?? 1500;
+        this.send(session, { type: 'talk:ok', enabled: true, silenceTimeoutMs: silenceMs });
+        break;
+      }
       case 'talk:disable': session.talkMode = false; this.send(session, { type: 'talk:ok', enabled: false }); break;
       case 'elevated:enable': {
         const cfg = this.loadConfig();
@@ -1000,6 +1017,8 @@ export class GatewayServer {
       case 'elevated:disable': session.elevated = false; this.send(session, { type: 'elevated:ok', enabled: false }); break;
       case 'chat:message': {
         const content = typeof msg.content === 'string' ? msg.content : String(msg.content ?? '');
+        const modelId = typeof msg.modelId === 'string' ? msg.modelId : undefined;
+        const thinking = (['high', 'medium', 'low', 'none'] as const).includes(msg.thinking) ? msg.thinking : undefined;
         if (this.config.hooks && this.config.deps.createHookLoader) {
           this.config.deps.createHookLoader().execute('message:received', { sessionId: session.id }).catch(() => {});
         }
@@ -1014,8 +1033,11 @@ export class GatewayServer {
         };
         this.callAgent(content, {
           currentSessionId: session.id,
+          source: session.source,
           onToken: (token) => this.send(session, { type: 'chat:chunk', content: token }),
-          onDone
+          onDone,
+          modelOverride: modelId,
+          thinking
         }).catch((e: Error) => this.send(session, { type: 'chat:response', content: `Error: ${e.message}` }));
         break;
       }
@@ -1045,6 +1067,10 @@ export class GatewayServer {
       agentId?: string;
       /** Pre-computed session key (from session-keys.ts). */
       sessionKey?: string;
+      /** Per-request thinking override (high|medium|low|none). Overrides agent.thinking. */
+      thinking?: 'high' | 'medium' | 'low' | 'none';
+      /** Per-request model override. Overrides config provider.modelId. */
+      modelOverride?: string;
     }
   ): Promise<string> {
     const sid = opts?.currentSessionId;
@@ -1077,6 +1103,7 @@ export class GatewayServer {
     const runOpts: Record<string, unknown> = {
       sessionId: sid,
       source,
+      ...(opts?.modelOverride ? { modelOverride: opts.modelOverride } : {}),
       elevated,
       onToken: opts?.onToken,
       onDone: opts?.onDone,
@@ -1114,6 +1141,22 @@ export class GatewayServer {
         recordUsage(hcDir, recordId, usage as { input: number; output: number; cacheRead?: number }, { source, model: (cfg?.provider?.modelId as string) ?? undefined }).catch(() => {});
       }
     };
+    // Per-agent thinking override: agent.thinking + request.thinking (request overrides agent)
+    const THINKING_MAP: Record<string, number> = { high: 10000, medium: 4000, low: 1000, none: 0 };
+    const toBudget = (t: unknown): number => {
+      if (!t) return 0;
+      if (typeof t === 'object' && t !== null && 'enabled' in t && 'budgetTokens' in t)
+        return (t as { enabled: boolean; budgetTokens: number }).enabled ? (t as { budgetTokens: number }).budgetTokens : 0;
+      const s = String(t);
+      return s === 'off' ? 0 : THINKING_MAP[s] ?? (s === 'standard' ? 8000 : s === 'extended' ? 32000 : 0);
+    };
+    const agentsList = Array.isArray(cfg?.agents?.list) ? cfg.agents.list : [];
+    const agent = opts?.agentId ? agentsList.find((a: { id?: string }) => a.id === opts!.agentId) : undefined;
+    const agentBudget = toBudget(agent?.thinking);
+    const reqBudget = opts?.thinking !== undefined ? THINKING_MAP[opts.thinking] ?? 0 : undefined;
+    const thinkingBudget = reqBudget !== undefined ? reqBudget : agentBudget;
+    if (thinkingBudget > 0) runOpts.thinkingBudget = thinkingBudget;
+
     const result = await this.config.deps.runAgentEngine(message, runOpts);
     return result.text;
   }

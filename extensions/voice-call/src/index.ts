@@ -34,6 +34,8 @@ export interface VoiceCallConfig {
   speakingRate: number;    // 0.5 - 2.0
   vadThreshold: number;    // Voice activity detection sensitivity
   maxSilenceMs: number;    // Stop recording after N ms of silence
+  /** Voice-first mode: always-on mic, wake-word activates. Requires native audio. */
+  alwaysOn?: boolean;
 }
 
 const DEFAULT_CONFIG: VoiceCallConfig = {
@@ -43,7 +45,8 @@ const DEFAULT_CONFIG: VoiceCallConfig = {
   wakeWord: 'hey hyper',
   speakingRate: 1.0,
   vadThreshold: 0.3,
-  maxSilenceMs: 1500
+  maxSilenceMs: 1500,
+  alwaysOn: false
 };
 
 function detectTTSEngine(): TTSEngine {

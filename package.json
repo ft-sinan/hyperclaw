@@ -1,6 +1,6 @@
 {
   "name": "hyperclaw",
-  "version": "5.4.0",
+  "version": "5.4.1",
   "description": "⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅",
   "main": "dist/run-main.js",
   "bin": {
@@ -62,7 +62,8 @@
     ".": "./dist/run-main.js",
     "./sdk": "./dist/sdk/index.js",
     "./core": "./packages/core/src/index.ts",
-    "./gateway": "./packages/gateway/src/index.ts"
+    "./gateway": "./packages/gateway/src/index.ts",
+    "./acp": "./packages/acp/src/index.ts"
   },
   "typesVersions": {
     "*": {
@@ -110,12 +111,13 @@
     "ws": "^8.18.0"
   },
   "optionalDependencies": {
+    "@hyperclaw/memory-lancedb": "file:packages/memory-lancedb",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@whiskeysockets/baileys": "^7.0.0",
     "discord.js": "^14.25.1",
     "irc": "^0.5.2",
     "pdf-parse": "^1.1.1",
-    "puppeteer": "^23.0.0",
+    "puppeteer": "^24.15.0",
     "tail": "^2.2.6",
     "xlsx": "^0.18.5"
   },

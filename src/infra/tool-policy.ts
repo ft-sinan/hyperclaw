@@ -11,7 +11,7 @@ export type ToolProfile = 'full' | 'messaging' | 'coding' | 'minimal';
 const TOOL_GROUPS: Record<string, string[]> = {
   'group:fs': ['read_file', 'write_file', 'edit_file', 'delete_file', 'list_directory'],
   'group:runtime': ['run_shell', 'kill_process'],
-  'group:sessions': ['sessions_list', 'sessions_send', 'sessions_history'],
+  'group:sessions': ['sessions_list', 'sessions_send', 'sessions_history', 'sessions_spawn'],
   'group:memory': ['read_memory', 'write_memory', 'memory_graph_add', 'memory_graph_query'],
   'group:ui': ['canvas_add', 'browser_snapshot', 'browser_action'],
   'group:messaging': ['sessions_send', 'sessions_list', 'sessions_history'],

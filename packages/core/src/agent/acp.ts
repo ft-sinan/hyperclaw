@@ -72,7 +72,13 @@ export class ACPThreadManager extends EventEmitter {
     model?: string;
     systemPrompt?: string;
     metadata?: Record<string, unknown>;
+    /** Resume existing ACP/Codex session by thread ID. Returns existing thread if found. */
+    resumeSessionId?: string;
   }): Promise<ACPThread> {
+    if (options.resumeSessionId) {
+      const existing = await this.get(options.resumeSessionId);
+      if (existing) return existing;
+    }
     const id = crypto.randomBytes(8).toString('hex');
     const now = new Date().toISOString();
 

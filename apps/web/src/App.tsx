@@ -15,7 +15,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.4.0';
+const APP_VERSION = '5.4.1';
 
 // ─── Theme context ────────────────────────────────────────────────────────────
 
@@ -593,7 +593,12 @@ function TerminalPanel({ open, onClose }: { open: boolean; onClose: () => void }
     setRunning(true);
     try {
       const { data: d } = await api.post<TerminalResult>('/api/terminal', { command: cmd });
-      if (d.user || d.cwd) setPromptInfo(`${d.user ?? 'user'}@${d.hostname ?? 'local'}:${d.cwd ?? ''}`);
+      if (d.user || d.cwd) {
+        const cwd = d.cwd ?? '';
+        // Windows path (drive letter like C:\...)
+        const isWindows = /^[A-Za-z]:[\\\/]/.test(cwd);
+        setPromptInfo(isWindows ? `PS ${cwd}>` : `${d.user ?? 'user'}@${d.hostname ?? 'local'}:${cwd}`);
+      }
       if (d.stdout) setLines(prev => [...prev, d.stdout.trimEnd()]);
       if (d.stderr) setLines(prev => [...prev, `ERR:${d.stderr.trimEnd()}`]);
       if (!d.stdout && !d.stderr) setLines(prev => [...prev, `(exit ${d.code ?? 0})`]);

@@ -1,0 +1,32 @@
+{
+  "version": "1",
+  "skills": [
+    {
+      "id": "web-search",
+      "name": "Web Search (Tavily)",
+      "description": "Real-time web search via Tavily API.",
+      "author": "hyperclaw-team",
+      "categories": ["utility"],
+      "tags": ["search", "internet", "tavily"],
+      "requiresKeys": ["TAVILY_API_KEY"]
+    },
+    {
+      "id": "github",
+      "name": "GitHub Integration",
+      "description": "Create issues, PRs, read repos.",
+      "author": "hyperclaw-team",
+      "categories": ["integration"],
+      "tags": ["github", "git", "code"],
+      "requiresKeys": ["GITHUB_TOKEN"]
+    },
+    {
+      "id": "weather",
+      "name": "Weather Forecast",
+      "description": "OpenWeatherMap integration. Current + 7-day forecast.",
+      "author": "hyperclaw-team",
+      "categories": ["utility"],
+      "tags": ["weather", "forecast"],
+      "requiresKeys": ["OPENWEATHER_API_KEY"]
+    }
+  ]
+}

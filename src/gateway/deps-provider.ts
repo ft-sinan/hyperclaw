@@ -4,6 +4,8 @@
  * Used when starting the gateway from daemon/CLI.
  */
 
+import fs from 'fs-extra';
+import path from 'path';
 import type { GatewayDeps } from '../../packages/gateway/src/deps';
 
 export async function createDefaultGatewayDeps(): Promise<GatewayDeps> {
@@ -45,6 +47,38 @@ export async function createDefaultGatewayDeps(): Promise<GatewayDeps> {
     return a2ui.toJSONL([msg]);
   };
 
+  // Memory V2: auto-index transcript turns into vector DB when memory.vectorDb.enabled
+  let vectorSvc: { addMemory: (text: string, category?: string, sessionId?: string) => Promise<void> } | null = null;
+  const onTranscriptAppend = (key: string, role: string, content: string): void => {
+    try {
+      const cfg = (() => {
+        try {
+          return fs.readJsonSync(paths.getConfigPath()) as { memory?: { vectorDb?: { enabled?: boolean; embeddingProvider?: string } }; provider?: { apiKey?: string } };
+        } catch {
+          return {};
+        }
+      })();
+      if (!cfg?.memory?.vectorDb?.enabled) return;
+      const initVectorSvc = async () => {
+        if (vectorSvc) return;
+        const mod = await import('@hyperclaw/memory-lancedb').catch(() => null);
+        const VectorMemoryService = mod?.VectorMemoryService;
+        if (!VectorMemoryService) return;
+        const svc = new VectorMemoryService({
+          dbPath: path.join(paths.getHyperClawDir(), 'memory-lancedb'),
+          apiKey: cfg?.provider?.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.GOOGLE_AI_API_KEY,
+          embeddingProvider: (cfg?.memory?.vectorDb?.embeddingProvider as 'openai' | 'gemini') ?? 'openai'
+        });
+        await svc.init?.();
+        vectorSvc = svc;
+      };
+      initVectorSvc().then(() => {
+        const text = content?.trim();
+        if (text && text.length > 20) vectorSvc?.addMemory(text, role, key).catch(() => {});
+      }).catch(() => {});
+    } catch {}
+  };
+
   return {
     getHyperClawDir: paths.getHyperClawDir,
     getConfigPath: paths.getConfigPath,
@@ -71,5 +105,13 @@ export async function createDefaultGatewayDeps(): Promise<GatewayDeps> {
       const dm = new daemon.DaemonManager();
       await dm.restart?.();
     },
+    loadConfig: () => {
+      try {
+        return fs.readJsonSync(paths.getConfigPath());
+      } catch {
+        return {};
+      }
+    },
+    onTranscriptAppend,
   };
 }

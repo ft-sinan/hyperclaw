@@ -12,7 +12,9 @@ const DEFAULTS = {
   launchAtLogin: false,
   notifications: true,
   chatMessages: [],
-  lastSessionId: null
+  lastSessionId: null,
+  modelId: '',
+  thinkingLevel: 'none'
 };
 
 function get(key) {
@@ -52,6 +54,22 @@ function appendChatMessage(msg) {
   setChatMessages(msgs);
 }
 
+function getModelId() {
+  return get('modelId') || '';
+}
+
+function setModelId(val) {
+  set('modelId', val);
+}
+
+function getThinkingLevel() {
+  return get('thinkingLevel') || 'none';
+}
+
+function setThinkingLevel(val) {
+  set('thinkingLevel', val);
+}
+
 module.exports = {
   get,
   set,
@@ -61,5 +79,9 @@ module.exports = {
   getChatMessages,
   setChatMessages,
   appendChatMessage,
+  getModelId,
+  setModelId,
+  getThinkingLevel,
+  setThinkingLevel,
   DEFAULTS
 };

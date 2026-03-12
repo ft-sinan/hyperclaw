@@ -219,3 +219,30 @@ export async function nodeRemove(id: string): Promise<void> {
   await saveNodes(nodes);
   console.log(chalk.green(`\n  ✔  Node removed: ${id}\n`));
 }
+
+/** Show pending work queued for dormant nodes. */
+export async function nodeQueue(nodeId?: string): Promise<void> {
+  const { listPending } = await import('../services/node-pending-queue');
+  const pending = listPending(nodeId);
+  console.log(chalk.bold.cyan('\n  📋 NODE PENDING QUEUE\n'));
+  if (pending.length === 0) {
+    console.log(chalk.gray('  No pending work.'));
+    if (nodeId) console.log(chalk.gray(`  (filter: ${nodeId})`));
+    console.log(chalk.gray('\n  Work is queued when a node is offline. Run `hyperclaw node probe` and the queue drains on success.\n'));
+    return;
+  }
+  const byNode = pending.reduce((acc, i) => {
+    if (!acc[i.nodeId]) acc[i.nodeId] = [];
+    acc[i.nodeId].push(i);
+    return acc;
+  }, {} as Record<string, typeof pending>);
+  for (const [nid, items] of Object.entries(byNode)) {
+    console.log(`  ${chalk.yellow('●')} ${chalk.white(nid)} — ${items.length} pending`);
+    for (const i of items.slice(0, 5)) {
+      console.log(`    ${chalk.gray(i.id)}  ${i.type}  ${chalk.gray(i.createdAt)}`);
+    }
+    if (items.length > 5) console.log(chalk.gray(`    ... +${items.length - 5} more`));
+    console.log();
+  }
+  console.log(chalk.gray('  Drain on node online: hyperclaw node probe <nodeId>\n'));
+}

@@ -46,6 +46,9 @@ export function resolveProviderApiKey(
     case 'openai': return process.env.OPENAI_API_KEY || '';
     case 'xai': return process.env.XAI_API_KEY || '';
     case 'google': return process.env.GOOGLE_AI_API_KEY || '';
+    case 'opencode-go':
+    case 'opencode-zen': return process.env.OPENCODE_API_KEY || '';
+    case 'ollama': return process.env.OLLAMA_API_KEY || '';  // Cloud mode; local uses empty
     case 'custom': return '';  // custom uses only config apiKey, no env fallback
     default: return process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || '';
   }
@@ -107,6 +110,19 @@ const SERVICE_ENV: Record<string, string> = {
   bugcrowd: 'BUGCROWD_API_TOKEN',
   synack: 'SYNACK_API_TOKEN',
 };
+
+/** Config shape for web search (from onboard wizard). */
+type WebSearchConfig = { provider?: string; apiKey?: string };
+
+/** Resolve Brave Search API key. Order: webSearch (provider=brave), skills.apiKeys.brave, BRAVE_API_KEY. */
+export function resolveBraveApiKey(
+  cfg: { webSearch?: WebSearchConfig; skills?: { apiKeys?: Record<string, string> } } | null
+): string {
+  if (cfg?.webSearch?.provider === 'brave' && cfg.webSearch.apiKey) return cfg.webSearch.apiKey;
+  const fromSkills = cfg?.skills?.apiKeys?.['brave'];
+  if (fromSkills) return fromSkills;
+  return process.env.BRAVE_API_KEY || '';
+}
 
 /** Resolve API key for a service (bug bounty, research apps, etc.). Config first, then env. */
 export function resolveServiceApiKey(

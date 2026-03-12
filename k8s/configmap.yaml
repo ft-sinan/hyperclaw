@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hyperclaw-config
+data:
+  HYPERCLAW_GATEWAY_PORT: "18789"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hyperclaw-secrets
+type: Opaque
+stringData:
+  # Set via: kubectl create secret generic hyperclaw-secrets --from-literal=OPENAI_API_KEY=sk-...
+  # Or use External Secrets / Sealed Secrets
+  OPENAI_API_KEY: ""

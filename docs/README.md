@@ -44,6 +44,8 @@ For a curated index of every page, see [Docs Hubs](docs-hubs.md).
 | [Mobile & Desktop Apps](mobile-desktop-apps.md) | OpenClaw vs HyperClaw — native apps, roadmap |
 | [Managed Hosting](managed-hosting.md) | Optional managed hosting options |
 | [Contributing](contributing.md) | CI pipeline, local check commands |
+| [Plugin SDK](PLUGIN_SDK.md) | Stable API for third-party plugins, tools, channels |
+| [Fine-tuned Model](FINE_TUNED_MODEL.md) | Roadmap for open-weights HyperClaw model |
 
 ---
 

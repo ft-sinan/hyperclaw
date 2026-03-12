@@ -1,0 +1,9 @@
+{
+  "name": "@hyperclaw/rag",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RAG — local document indexing for HyperClaw",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "keywords": ["hyperclaw", "rag", "document", "indexing"]
+}

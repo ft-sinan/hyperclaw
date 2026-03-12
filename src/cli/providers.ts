@@ -92,6 +92,20 @@ export const PROVIDERS: Provider[] = [
     ]
   },
   {
+    id: 'opencode-go',
+    displayName: '🔧 OpenCode Go (code-focused)',
+    authType: 'api_key',
+    authLabel: 'OpenCode API Key',
+    authHint: 'opencode.ai — same key as Zen. Code models: Kimi K2.5, GLM-5, MiniMax M2.5',
+    baseUrl: 'https://opencode.ai/zen/go/v1',
+    models: [
+      { id: 'kimi-k2.5', name: 'Kimi K2.5 (code)', contextK: 128, flagship: true },
+      { id: 'glm-5', name: 'GLM-5 (code)', contextK: 128 },
+      { id: 'minimax-m2.5', name: 'MiniMax M2.5 (code)', contextK: 128 },
+      { id: '__manual__', name: 'Enter model ID manually', contextK: 128 },
+    ]
+  },
+  {
     id: 'openrouter',
     displayName: '🌐 OpenRouter',
     authType: 'api_key',

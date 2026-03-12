@@ -9,11 +9,25 @@
 
 ---
 
-Skills extend the agent with new capabilities. HyperClaw supports three ways to get skills:
+Skills extend the agent with new capabilities. HyperClaw supports four ways to get skills:
 
-1. **Bundled skills** — shipped with HyperClaw (`skills/` directory)
-2. **Install from URL** — one-step install from clawhub.ai or any SKILL.md URL
-3. **Self-writing** — agent creates custom skills on demand via `create_skill`
+1. **`hyperclaw hub`** — skill marketplace (search, install, list)
+2. **Bundled skills** — shipped with HyperClaw (`skills/` directory)
+3. **Install from URL** — one-step install from clawhub.ai or any SKILL.md URL
+4. **Self-writing** — agent creates custom skills on demand via `create_skill`
+
+### Skill marketplace (`hyperclaw hub`)
+
+| Command | Description |
+|---------|-------------|
+| `hyperclaw hub` | Browse curated skills |
+| `hyperclaw hub search [query]` | Search (ClawHub + community registry + bundled) |
+| `hyperclaw hub install <id>` | Install a skill |
+| `hyperclaw hub list` | List installed skills |
+| `hyperclaw hub marketplace` | Full marketplace view |
+| `hyperclaw hub scan <id>` | Security scan a skill |
+
+Community registry: `data/community-skills.json` (bundled fallback when remote ClawHub is unavailable).
 
 ---
 

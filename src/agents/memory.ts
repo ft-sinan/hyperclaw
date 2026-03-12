@@ -127,13 +127,16 @@ ${id.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
     spinner.succeed(`Rule added to AGENTS.md`);
   }
 
-  async addMemory(fact: string): Promise<void> {
+  async addMemory(fact: string, vectorStore?: { addMemory: (text: string) => Promise<void> }): Promise<void> {
     const spinner = ora('Writing to MEMORY.md...').start();
     const content = await fs.readFile(this.memoryFile, 'utf8');
     const entry = `\n- [${new Date().toISOString()}] ${fact}`;
     const updated = content.replace('*(Write important information here for future sessions)*',
       `*(Write important information here for future sessions)*${entry}`);
     await fs.writeFile(this.memoryFile, updated, 'utf8');
+    if (vectorStore) {
+      try { await vectorStore.addMemory(fact); } catch { /* optional */ }
+    }
     spinner.succeed(`Memory updated`);
   }
 

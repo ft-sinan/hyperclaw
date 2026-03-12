@@ -102,6 +102,9 @@ export interface DiscordPairingBridge {
   verify(code: string, senderId: string): Promise<boolean>;
 }
 
+/** Auto-archive duration for auto-created threads (minutes). Discord-supported values. */
+export type ThreadArchiveDuration = 60 | 1440 | 4320 | 10080;
+
 export interface DiscordConfig {
   token: string;
   dmPolicy: 'open' | 'allowlist' | 'pairing' | 'none';
@@ -113,6 +116,8 @@ export interface DiscordConfig {
   commandPrefix: string;        // default: '!'
   pairingBridge?: DiscordPairingBridge; // use PairingStore when set
   slashCommands?: boolean;     // register /help, /status. default: true
+  /** Auto-archive duration for auto-created threads: 60=1h, 1440=1d, 4320=3d, 10080=1w. Default: 60 */
+  autoArchiveDuration?: ThreadArchiveDuration;
 }
 
 // ─── Connector ────────────────────────────────────────────────────────────────
@@ -468,6 +473,35 @@ export class DiscordConnector extends EventEmitter {
   async sendDM(userId: string, content: string): Promise<void> {
     const channelId = await this.createDMChannel(userId);
     await this.sendMessage(channelId, content);
+  }
+
+  /**
+   * Create a public thread on a guild channel.
+   * Uses autoArchiveDuration from config (default: 60 min).
+   */
+  async createThread(channelId: string, name: string, messageId?: string): Promise<string | null> {
+    const archiveDuration: ThreadArchiveDuration = this.config.autoArchiveDuration ?? 60;
+    try {
+      let thread: any;
+      if (messageId) {
+        // Thread from existing message
+        thread = await discordRest(this.token, 'POST', `/channels/${channelId}/messages/${messageId}/threads`, {
+          name: name.slice(0, 100),
+          auto_archive_duration: archiveDuration,
+        });
+      } else {
+        // Standalone thread (forum/text channel)
+        thread = await discordRest(this.token, 'POST', `/channels/${channelId}/threads`, {
+          name: name.slice(0, 100),
+          auto_archive_duration: archiveDuration,
+          type: 11, // PUBLIC_THREAD
+        });
+      }
+      return thread?.id ?? null;
+    } catch (e: any) {
+      console.log(chalk.yellow(`  ⚠  Discord createThread failed: ${e.message}`));
+      return null;
+    }
   }
 
   // ─── Pairing ───────────────────────────────────────────────────────────────

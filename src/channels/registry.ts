@@ -32,7 +32,8 @@ export const CHANNELS: ChannelDef[] = [
     tokenHint: 'Get from @BotFather → /newbot',
     extraFields: [
       { name: 'dmPolicy', label: 'DM policy', hint: 'pairing (default) | allowlist | open | disabled', required: false },
-      { name: 'groupActivation', label: 'Group activation', hint: 'mention (default) | always', required: false }
+      { name: 'groupActivation', label: 'Group activation', hint: 'mention (default) | always', required: false },
+      { name: 'inlineMode', label: 'Inline mode', hint: 'Use @botname <query> in any chat. Enable via BotFather /setinline first.', required: false }
     ],
     setupSteps: [
       '1. Open Telegram → @BotFather → /newbot. Save the token.',
@@ -68,7 +69,8 @@ export const CHANNELS: ChannelDef[] = [
     extraFields: [
       { name: 'listenGuildIds', label: 'Guild IDs to listen in', hint: '[] = all. Add Server IDs to restrict.', required: false },
       { name: 'requireMentionInGuild', label: 'Require @mention in guild', hint: 'true (default) | false', required: false },
-      { name: 'dmPolicy', label: 'DM policy', hint: '"pairing" (default) | "allowlist" | "open" | "none"', required: false }
+      { name: 'dmPolicy', label: 'DM policy', hint: '"pairing" (default) | "allowlist" | "open" | "none"', required: false },
+      { name: 'autoArchiveDuration', label: 'Thread auto-archive duration (min)', hint: '60=1h (default) | 1440=1d | 4320=3d | 10080=1w', required: false }
     ],
     status: 'recommended',
     npmPackage: 'ws'
@@ -837,3 +839,57 @@ export const ZALO_PERSONAL: ChannelDef = {
 
 // Add to CHANNELS array
 CHANNELS.push(ZALO_PERSONAL);
+
+// ─── Notion ───────────────────────────────────────────────────────────────────
+export const NOTION: ChannelDef = {
+  id: 'notion',
+  name: 'Notion',
+  emoji: '📋',
+  requiresGateway: false,
+  supportsDM: false,
+  platforms: ['all'],
+  tokenLabel: 'Notion Integration Token',
+  tokenHint: 'notion.so/my-integrations → New integration → Copy token',
+  extraFields: [
+    { name: 'defaultDatabaseId', label: 'Default Database ID', hint: 'Paste the 32-char ID from your Notion DB URL', required: false },
+    { name: 'defaultPageId', label: 'Default Page ID', hint: 'Optional: page to write notes to by default', required: false },
+  ],
+  setupSteps: [
+    '1. Go to notion.so/my-integrations → New integration → give it a name.',
+    '2. Copy the Internal Integration Token (starts with secret_...).',
+    '3. Open the Notion page/database you want to use → Share → Invite your integration.',
+    '4. Set NOTION_TOKEN in your env or config: channels.notion.token.',
+    '5. Optional: set defaultDatabaseId to auto-create pages in a DB.',
+    '',
+    '  🔗 docs/notion.md — full setup'
+  ],
+  status: 'available',
+  notes: 'Read/write pages, create DB entries, search workspace. Needs explicit page share.'
+};
+CHANNELS.push(NOTION);
+
+// ─── Shazam ───────────────────────────────────────────────────────────────────
+export const SHAZAM: ChannelDef = {
+  id: 'shazam',
+  name: 'Shazam (Song Recognition)',
+  emoji: '🎵',
+  requiresGateway: false,
+  supportsDM: false,
+  platforms: ['all'],
+  tokenLabel: 'RapidAPI Key (Shazam API)',
+  tokenHint: 'rapidapi.com/apidojo/api/shazam → Subscribe → Copy X-RapidAPI-Key',
+  extraFields: [
+    { name: 'autoRecognize', label: 'Auto-recognize on audio messages', hint: 'true | false (default)', required: false },
+  ],
+  setupSteps: [
+    '1. Sign up at rapidapi.com → search "Shazam" → subscribe to the free plan.',
+    '2. Copy your X-RapidAPI-Key from the API dashboard.',
+    '3. Set SHAZAM_API_KEY in your env or config: channels.shazam.apiKey.',
+    '4. Send an audio clip or hum detection query to identify a song.',
+    '',
+    '  🔗 docs/shazam.md — full setup'
+  ],
+  status: 'available',
+  notes: 'Song recognition via Shazam API on RapidAPI. Free tier: 500 req/month.'
+};
+CHANNELS.push(SHAZAM);

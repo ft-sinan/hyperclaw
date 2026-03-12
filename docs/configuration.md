@@ -130,6 +130,7 @@ Per-channel config, keyed by channel ID:
 | `apiKey` | string | ElevenLabs API key (or `ELEVENLABS_API_KEY` env) |
 | `voiceId` | string | Optional voice ID (default: Rachel) |
 | `modelId` | string | Optional model (default: eleven_multilingual_v2) |
+| `silenceTimeoutMs` | number | Auto-send transcript after N ms of silence (default: 1500). Clients use this for VAD. |
 
 Enable per-session with WebSocket `talk:enable`. Responses are synthesized to audio and sent as `chat:audio`.
 
@@ -160,6 +161,59 @@ Tool groups: `group:fs`, `group:runtime`, `group:sessions`, `group:memory`, `gro
 |-----|------|-------------|
 | `enabled` | boolean | Enable host tools |
 | `level` | string | `full` \| `read-only` \| `sandboxed` |
+
+---
+
+## memory (Memory V2 — Vector DB)
+
+Semantic search over conversation history. When enabled, transcript turns are auto-indexed into a vector DB.
+
+```json
+{
+  "memory": {
+    "vectorDb": {
+      "enabled": true,
+      "embeddingProvider": "openai"
+    }
+  },
+  "provider": { "apiKey": "sk-..." }
+}
+```
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `memory.vectorDb.enabled` | boolean | Enable auto-indexing of transcript turns for semantic search |
+| `memory.vectorDb.embeddingProvider` | string | `openai` (default) or `gemini` — uses provider API key / `OPENAI_API_KEY` or `GOOGLE_AI_API_KEY` |
+
+Requires `@hyperclaw/memory-lancedb`, `vectordb`, and the chosen embedder (`openai` or `GOOGLE_AI_API_KEY` for Gemini). Search via `hyperclaw memory search-vector <query>`.
+
+**Multimodal memory** (image + audio): set `embeddingProvider: "gemini"` and `GOOGLE_AI_API_KEY`. Use:
+- `hyperclaw memory add-image <path> [--caption "…"]`
+- `hyperclaw memory add-audio <path> [--transcript "…"]`
+
+---
+
+## multiAgent
+
+Remote HyperClaw instances for the `call_remote_agent` tool — lets agents delegate to other nodes.
+
+```json
+{
+  "multiAgent": {
+    "remotes": {
+      "researcher": { "url": "https://research.example.com:18789" },
+      "secure": { "url": "http://127.0.0.1:18790", "token": "secret-token" }
+    }
+  }
+}
+```
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `multiAgent.remotes.<id>.url` | string | Base URL of the remote gateway (e.g. `https://host:18789`) |
+| `multiAgent.remotes.<id>.token` | string | Optional Bearer token for `/api/chat` auth |
+
+The agent can use `call_remote_agent` with `remote_id` and `message` to invoke the remote instance.
 
 ---
 

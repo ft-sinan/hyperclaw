@@ -117,10 +117,12 @@ export async function resolveTools(opts: {
   const { getWebsiteWatchTools } = await import('./website-watch-tools');
   const { getVisionTools } = await import('./vision-tools');
   const { getBountyTools } = await import('./bounty-tools');
+  const { getSearchTools } = await import('./search-tools');
+  const { getMultiAgentTools } = await import('./multi-agent-tools');
   const { loadMCPTools } = await import('../../../../src/services/mcp-loader');
   const { applyToolPolicy } = await import('../../../../src/infra/tool-policy');
 
-  const CUSTOM_BASEURL_PROVIDERS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen']);
+  const CUSTOM_BASEURL_PROVIDERS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go']);
   const isLocal = cfg?.provider?.providerId === 'local' || cfg?.provider?.providerId === 'ollama' || cfg?.provider?.providerId === 'lmstudio';
   const provider = cfg?.provider?.providerId === 'anthropic' || cfg?.provider?.providerId === 'anthropic-oauth' || cfg?.provider?.providerId === 'anthropic-setup-token' ? 'anthropic'
     : (cfg?.provider?.providerId === 'custom' || isLocal || CUSTOM_BASEURL_PROVIDERS.has(cfg?.provider?.providerId ?? '')) ? 'custom' : 'openrouter';
@@ -128,6 +130,8 @@ export async function resolveTools(opts: {
   const apiKey = await (await import('../../../../src/infra/env-resolve')).getProviderCredentialAsync(cfg);
   const visionTools = getVisionTools({ apiKey: apiKey || '', provider: visionProvider });
   const bountyTools = getBountyTools(cfg);
+  const searchTools = getSearchTools(cfg);
+  const multiAgentTools = getMultiAgentTools(cfg);
 
   let skillInvokeTools: Tool[] = [];
   try {
@@ -152,6 +156,8 @@ export async function resolveTools(opts: {
     ...getWebsiteWatchTools(),
     ...visionTools,
     ...bountyTools,
+    ...searchTools,
+    ...multiAgentTools,
     ...skillInvokeTools
   ];
 
@@ -185,7 +191,7 @@ export async function runAgentEngine(
   opts: AgentEngineOptions & { activeServer?: unknown; appendTranscript?: (sid: string, role: string, content: string) => void }
 ): Promise<AgentEngineResult> {
   const cfg: HyperClawConfig = await fs.readJson(getConfigPath()).catch(() => ({}));
-  const CUSTOM_BASEURL_IDS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen']);
+  const CUSTOM_BASEURL_IDS = new Set(['groq','mistral','deepseek','perplexity','huggingface','ollama','lmstudio','local','xai','openai','google','minimax','moonshot','qwen','zai','litellm','cloudflare','copilot','vercel-ai','opencode-zen','opencode-go']);
   const isLocalProvider = cfg?.provider?.providerId === 'local' || cfg?.provider?.providerId === 'ollama' || cfg?.provider?.providerId === 'lmstudio';
   const apiKey = await (await import('../../../../src/infra/env-resolve')).getProviderCredentialAsync(cfg);
   if (!apiKey && !isLocalProvider) {

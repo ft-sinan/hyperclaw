@@ -11,6 +11,8 @@ export interface ISessionServer {
   getSessionsList?(): unknown[];
   sendToSession?(id: string, msg: unknown): boolean;
   getSessionHistory?(id: string, limit: number): unknown[] | undefined;
+  /** Spawn a child agent session (optional — for sessions_spawn tool) */
+  spawnChildAgent?(prompt: string, options?: { model?: string; workspace?: string }): Promise<{ sessionId: string; result: string }>;
 }
 
 export function getSessionsTools(
@@ -73,6 +75,30 @@ export function getSessionsTools(
         const limit = parseInt((input.limit as string) || '20');
         const history = (server as any).getSessionHistory?.(sid, limit) ?? [];
         return JSON.stringify(history, null, 2);
+      }
+    },
+    {
+      name: 'sessions_spawn',
+      description: 'Spawn a child agent to handle a task. Returns the child session ID and result. Use for delegation and parallel work.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Task for the child agent' },
+          model: { type: 'string', description: 'Model override (optional)' },
+          workspace: { type: 'string', description: 'Workspace path for child (optional)' }
+        },
+        required: ['prompt']
+      },
+      handler: async (input) => {
+        const server = getServer();
+        if (!server) return 'Gateway not available (sessions_spawn requires gateway context).';
+        const spawn = (server as any).spawnChildAgent;
+        if (!spawn) return 'sessions_spawn not supported by this gateway.';
+        const prompt = input.prompt as string;
+        const model = (input.model as string) || undefined;
+        const workspace = (input.workspace as string) || undefined;
+        const result = await spawn(prompt, { model, workspace });
+        return JSON.stringify(result, null, 2);
       }
     }
   ];
