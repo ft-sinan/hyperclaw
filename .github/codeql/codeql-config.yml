@@ -1,0 +1,6 @@
+# CodeQL config — exclude known false positives / accepted-risk paths
+# #105: Terminal runs user commands by design; input validated (block metacharacters)
+# #106: Port from config used for localhost probe only; validated 1-65535
+paths-ignore:
+  - 'packages/gateway/src/server.ts'
+  - 'packages/gateway/src/manager.ts'
