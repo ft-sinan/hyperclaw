@@ -16,7 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [5.3.5] - 2026-03-13
+## [5.4.0] - 2026-03-13
 
 ### Fixed
 - **`hyperclaw web` exiting on its own** - The CLI returned to the global `process.exit(0)` path right after starting the Web UI. The `web` command now stays alive until the user closes it and shuts down cleanly on `Ctrl+C`.

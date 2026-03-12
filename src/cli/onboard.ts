@@ -2409,7 +2409,7 @@ export class HyperClawWizard {
       chalk.gray('  🧩 hyperclaw hub             — Skill hub'),
       chalk.gray('  🌐 hyperclaw gateway status  — Gateway panel'),
       chalk.gray('  🩸 hyperclaw ') + chalk.red('daemon') + chalk.gray(' status   — Service status'),
-      chalk.gray('  🎙️  hyperclaw voice           — Voice settings'),
+      chalk.gray('  🎙️  hyperclaw voice          — Voice settings'),
       chalk.gray('  🎨 hyperclaw canvas show     — AI canvas'),
     ];
     if (needsStart) {
@@ -2432,7 +2432,7 @@ export class HyperClawWizard {
     ].join('\n');
 
     console.log('\n' + boxen(
-      chalk.hex('#06b6d4')('🦅 HyperClaw v5.3.5 ready!\n\n') + lines,
+      chalk.hex('#06b6d4')('🦅 HyperClaw v5.4.0 ready!\n\n') + lines,
       { padding: 1, borderStyle: 'round', borderColor: 'cyan', margin: 1, backgroundColor: '#0a0a0a' }
     ));
   }

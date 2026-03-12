@@ -23,7 +23,7 @@ export class Banner {
 
     const subtitle = daemonMode
       ? chalk.hex(t.daemonPrimary)('    🩸 DAEMON MODE - ALWAYS WATCHING 🩸\n')
-      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.3.5 🦅\n');
+      : t.muted('    🦅 HyperClaw Bot - AI Gateway v5.4.0 🦅\n');
 
     console.log(subtitle);
 

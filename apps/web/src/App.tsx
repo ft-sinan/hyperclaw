@@ -15,7 +15,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const APP_VERSION = '5.3.5';
+const APP_VERSION = '5.4.0';
 
 // ─── Theme context ────────────────────────────────────────────────────────────
 
