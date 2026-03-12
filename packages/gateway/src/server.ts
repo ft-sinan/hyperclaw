@@ -602,6 +602,7 @@ export class GatewayServer {
           delete safeEnv['GIT_EXEC_PATH'];
           delete safeEnv['GIT_DIR'];
           delete safeEnv['GIT_WORK_TREE'];
+          // codeql[js/command-line-injection] Intentional: web terminal runs user commands; input validated above.
           const child = spawn(shell, args, {
             cwd,
             env: safeEnv,

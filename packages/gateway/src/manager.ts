@@ -46,6 +46,7 @@ export class GatewayManager {
       socket.on('error', () => resolve(false));
       socket.on('timeout', () => resolve(false));
       try {
+        // codeql[js/request-forgery] port validated 1-65535; localhost probe only
         socket.connect(port, '127.0.0.1');
       } catch {
         resolve(false);
