@@ -108,7 +108,7 @@ program
     init, onboard, quickstart, setup
     gateway status|start|stop|restart|config, daemon start|stop|restart|status|logs|install|uninstall
     web (--port, --skip-install), chat (--session, --model, --workspace)
-    agent -m "message" (--thinking, --model)
+    agent -m "message" (--thinking, --model, --multi-step, --parallel)
     channels list|add|remove|login|status
     hooks list|info|enable|disable|install
     pairing list|approve, devices list|pair|approve|reject|unpair
@@ -120,7 +120,7 @@ program
     secrets audit|set|apply|reload|remove|credentials
     doctor [--fix], health, security audit
     status (--all, --deep), dashboard
-    acp, threads create|list|terminate, canvas show|add|clear|export
+    acp, threads create (--resume <id>)|list|terminate, canvas show|add|clear|export
     mcp list|add|remove|probe [id], node list|add|probe [id]|remove|queue [nodeId]
     nodes, delivery status|retry
     cron list|add|remove (-s --skill), webhooks list|remove|toggle

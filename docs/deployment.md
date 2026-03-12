@@ -43,6 +43,15 @@ docker compose up -d
 
 Runs the main gateway. Add `--profile sandbox` or `--profile browser` to include those services.
 
+## One-command deploy
+
+```bash
+hyperclaw deploy --platform fly      # Fly.io (default)
+hyperclaw deploy --platform render  # Render
+hyperclaw deploy --platform railway # Railway
+hyperclaw deploy --dry-run          # Show commands only
+```
+
 ## Fly.io
 
 See `fly.toml`. Deploy with:
@@ -57,6 +66,14 @@ Set secrets: `fly secrets set OPENROUTER_API_KEY=xxx` etc.
 
 See `render.yaml`. Connect the repo and deploy; configure env vars in the dashboard.
 
+## Railway
+
+```bash
+hyperclaw deploy --platform railway
+```
+
+Or: create project at [railway.app/new](https://railway.app/new), deploy from GitHub or Docker. Set env vars: `OPENROUTER_API_KEY`, `HYPERCLAW_GATEWAY_TOKEN`, `PORT=18789`.
+
 ## Environment
 
 - `HYPERCLAW_PORT` — port (default 18789)
@@ -67,6 +84,16 @@ See `render.yaml`. Connect the repo and deploy; configure env vars in the dashbo
 ## Data persistence
 
 Mount `~/.hyperclaw` (or `$HYPERCLAW_DIR`) for config, credentials, and channel state.
+
+## Pi Agent (.pi/)
+
+Lightweight runtime for Raspberry Pi and embedded devices:
+
+```bash
+node .pi/index.js
+```
+
+Serves on port 18789 (or `HYPERCLAW_GATEWAY_PORT`). Returns a minimal status JSON — point to your main gateway for full agent features. Use for edge nodes that proxy to a central instance.
 
 ---
 

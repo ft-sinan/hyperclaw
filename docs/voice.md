@@ -56,6 +56,21 @@ The wake word is set in the wizard (`hyperclaw onboard`) or in config:
 
 `hyperclaw voice` uses the wake word from config if `-w` / `--wake-word` is not passed. Alternative: use [Porcupine](https://picovoice.ai/docs/porcupine/) (Picovoice) for real hardware wake-word detection.
 
+### Voice-first (alwaysOn)
+
+Voice-call extension supports **always-on** mode — mic stays active, wake-word activates response. Config in voice-call extension:
+
+```json
+{
+  "voiceCall": {
+    "alwaysOn": true,
+    "wakeWord": "hey hyper"
+  }
+}
+```
+
+Requires native audio access. Default: `alwaysOn: false`.
+
 ---
 
 <div align="center">

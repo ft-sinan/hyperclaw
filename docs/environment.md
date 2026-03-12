@@ -53,6 +53,18 @@ See [env.example](../env.example) and [.env.example](../.env.example) for the fu
 
 ---
 
+## Encrypted config (HYPERCLAW_CONFIG_KEY)
+
+When `HYPERCLAW_CONFIG_KEY` is set to a **32-byte hex string** (64 characters), config is stored at-rest encrypted (AES-256-GCM). The gateway and CLI use this key to decrypt on load.
+
+| Variable | Purpose |
+|----------|---------|
+| `HYPERCLAW_CONFIG_KEY` | 32-byte hex (64 chars). When set, `hyperclaw.json` is encrypted. Required for decrypt if config is already encrypted. |
+
+Generate a key: `openssl rand -hex 32`. Keep it secret and backed up — without it, encrypted config cannot be read.
+
+---
+
 ## HYPERCLAW_HOME
 
 When set, `HYPERCLAW_HOME` replaces the system home for internal path resolution. Enables full filesystem isolation for headless service accounts.

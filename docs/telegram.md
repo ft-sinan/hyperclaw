@@ -128,6 +128,7 @@ curl "https://api.telegram.org/bot<bot_token>/getUpdates"
 | `groups` | object | - | Per-group overrides |
 | `groups.*.requireMention` | boolean | true | Mention gating |
 | `groups.*.allowFrom` | string[] | - | Per-group sender allowlist |
+| `inlineMode` | boolean | false | Inline mode — use @botname query in any chat. Enable via BotFather `/setinline` first. |
 
 ### Env vars
 
@@ -199,6 +200,7 @@ Config values win over env. `TELEGRAM_BOT_TOKEN` applies when `channels.telegram
 | Voice notes | ✅ ( transcribed via gateway ) |
 | Long polling | ✅ |
 | Webhook mode | ⚠️ Connector supports; gateway wiring optional |
+| Inline mode (@botname query) | ✅ `inlineMode: true` |
 | Forum topics | Planned |
 | Inline buttons | Planned |
 | Streaming preview | Planned |

@@ -46,6 +46,7 @@ For a curated index of every page, see [Docs Hubs](docs-hubs.md).
 | [Contributing](contributing.md) | CI pipeline, local check commands |
 | [Plugin SDK](PLUGIN_SDK.md) | Stable API for third-party plugins, tools, channels |
 | [Fine-tuned Model](FINE_TUNED_MODEL.md) | Roadmap for open-weights HyperClaw model |
+| [Recent Features](FEATURES-RECENT.md) | OpenCode Go, Ollama, RAG, Dashboard v2, Pi agent, i18n |
 
 ---
 

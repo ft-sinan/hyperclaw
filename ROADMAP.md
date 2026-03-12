@@ -120,7 +120,8 @@
 > **ACP (Agent Client Protocol)** — [x] stdio server (`hyperclaw acp`) with initialize, session/new, session/load, session/prompt, session/cancel; tool streaming to IDE via session/update. [ ] sessions_spawn gateway impl; [ ] ACPX runtime for image prompts.
 
 ### Long-term
-- [ ] **HyperClaw Cloud** (optional) — hosted relay for channels that need a public endpoint
+- [ ] **HyperClaw Cloud** (optional) — hosted relay for channels that 
+
 - [ ] **Mobile-native agent** — full agent running on-device on iOS/Android
 - [ ] **Enterprise features** — SSO, audit logs, team management
 

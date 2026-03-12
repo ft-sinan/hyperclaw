@@ -46,8 +46,8 @@ All HyperClaw CLI commands with explanations of what they do.
 | Command | Description |
 |---------|-------------|
 | `hyperclaw web` | Launch React Web UI — auto `npm install` + `npm run dev`. Options: `--skip-install`, `--port <port>`. |
-| `hyperclaw chat` | Interactive terminal chat with the agent. Options: `--session`, `--model`, `--thinking`, `--workspace`. In-chat commands: `/exit`, `/clear`, `/model`, `/skills`, `/help`. |
-| `hyperclaw agent -m "message"` | Sends a one-off message to the agent (non-streaming). Options: `--thinking`, `--model`, `--session`, `--multi-step`, `--parallel`, `--verbose`. |
+| `hyperclaw chat` | Interactive terminal chat. Options: `--session`, `--model`, `--thinking`, `--workspace`. **In-chat commands:** `/exit` quit, `/clear` clear history, `/model` change model, `/skills` list skills, `/help` show help. |
+| `hyperclaw agent -m "message"` | One-off message (non-streaming). Options: `--thinking`, `--model`, `--session`, `--multi-step` (run multiple tool rounds), `--parallel` (parallel tool calls), `--verbose`. |
 
 ---
 
@@ -200,7 +200,7 @@ All HyperClaw CLI commands with explanations of what they do.
 | `hyperclaw node add` | Add / pair a node. |
 | `hyperclaw node probe [id]` | Probe a node. |
 | `hyperclaw node remove <id>` | Remove a node. |
-| `hyperclaw node queue [nodeId]` | List pending work queued for dormant nodes. |
+| `hyperclaw node queue [nodeId]` | List work queued for dormant (offline) nodes. Work is enqueued when a node is offline; it drains when you run `hyperclaw node probe`. |
 | `hyperclaw nodes` | List connected mobile nodes (iOS/Android Connect). |
 
 ---
@@ -304,6 +304,7 @@ The gateway’s built-in chat at `http://localhost:18789/chat` uses the static H
 
 - **Web UI**: After `hyperclaw gateway` or `hyperclaw daemon start`, open `http://localhost:18789` (or your gateway port). Dashboard, Chat with New chat / Clear messages, and **Local terminal** panel below the chat — with Build, Install, Test, Doctor buttons.
 - **Terminal API**: `POST /api/terminal` with `{ "command": "npm run build" }` — runs a command in the gateway's cwd.
+- **Terminal working directory (path)**: The terminal runs in the gateway's `process.cwd()` (where you started the gateway). Works on Windows, Linux, and Mac. The path appears in the terminal title bar **after** you run any command. To show it immediately, run `cd` (Windows/PowerShell) or `pwd` (Linux/macOS). You'll then see `PS C:\Users\...>` or `user@hostname:/path` in the header.
 
 ---
 

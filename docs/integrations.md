@@ -61,6 +61,26 @@ Actions: `search` (query, limit)
 
 ---
 
+### Brave LLM Context (Web Search with Grounding)
+
+Pre-extracted web content for LLM grounding — research, fact-checking, docs. Tool: `brave_llm_context`.
+
+```bash
+# Configure via wizard (web search → Brave) or:
+# Config: skills.apiKeys.brave or webSearch: { provider: 'brave', apiKey: 'BSA...' }
+# Env: BRAVE_API_KEY
+```
+
+API: [api.search.brave.com/res/v1/llm/context](https://api.search.brave.com/res/v1/llm/context). Returns snippets ready for the agent to reason over.
+
+---
+
+### RAG (Retrieval-Augmented Generation)
+
+Package `packages/rag` — indexes documents into a vector store for semantic search. Requires `@hyperclaw/memory-lancedb`. Config: `dbPath`, `chunkSize`, `chunkOverlap`. See [FEATURES-RECENT](FEATURES-RECENT.md) (RAG) and [Configuration](configuration.md) (memory).
+
+---
+
 ### Spotify
 
 ```bash

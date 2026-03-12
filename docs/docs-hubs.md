@@ -81,10 +81,11 @@ Curated index of every docs page. Start with [Getting Started](guides/getting-st
 
 | Page | Description |
 |------|-------------|
+| [Integrations](integrations.md) | Built-in tools, RAG, Brave LLM Context |
+| [FEATURES-RECENT](FEATURES-RECENT.md) | RAG, extensions, HyperClawKit, Pi agent, i18n |
 | [Browser](browser.md) | Puppeteer tools (browser_snapshot, browser_action) |
 | [Memory integration](memory-integration.md) | Memory hooks |
-| [Voice](voice.md) | Voice features |
-| [Gmail Pub/Sub](gmail-pubsub.md) | Gmail hooks |
+| [Voice](voice.md) | Voice, voice-first (alwaysOn) |
 
 ---
 

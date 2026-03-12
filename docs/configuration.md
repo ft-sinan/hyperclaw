@@ -120,6 +120,7 @@ Per-channel config, keyed by channel ID:
 | `defaults.workspace` | string | Workspace root path |
 | `defaults.sandbox.mode` | string | `main` \| `non-main` |
 | `list[].groupChat` | object | Per-agent group chat: `mentionPatterns`, `historyLimit`. See [Group Messages](group-messages.md). |
+| `list[].thinking` | string \| object | Per-agent extended thinking: `off` \| `standard` (8k) \| `extended` (32k) or `{ enabled, budgetTokens }`. API `POST /api/chat` accepts `body.thinking: 'high'|'medium'|'low'|'none'` to override per request. |
 
 ---
 
@@ -190,6 +191,28 @@ Requires `@hyperclaw/memory-lancedb`, `vectordb`, and the chosen embedder (`open
 **Multimodal memory** (image + audio): set `embeddingProvider: "gemini"` and `GOOGLE_AI_API_KEY`. Use:
 - `hyperclaw memory add-image <path> [--caption "…"]`
 - `hyperclaw memory add-audio <path> [--transcript "…"]`
+
+---
+
+## multiUser
+
+Multi-user mode — separate contexts per user.
+
+```json
+{
+  "multiUser": {
+    "enabled": true,
+    "users": {
+      "user123": { "workspace": "/path/to/workspace", "agentId": "research" }
+    }
+  }
+}
+```
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `multiUser.enabled` | boolean | Enable multi-user mode |
+| `multiUser.users` | object | User ID → `{ workspace?, agentId? }` |
 
 ---
 

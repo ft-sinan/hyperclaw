@@ -43,7 +43,7 @@ Authorization: Bearer <token>
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/v1/check` | No | Health check. Returns `{ ok: true, service: "hyperclaw", version: "5.0.1" }` |
+| GET | `/api/v1/check` | No | Health check. Returns `{ ok: true, service: "hyperclaw", version: "5.4.x" }` |
 | GET | `/api/status` | No | Gateway status: `{ running, port, channels, model, agentName, sessions, uptime }` |
 
 ### Config
@@ -60,7 +60,7 @@ Headers: `X-Hyperclaw-Device` (optional device id for rate limiting).
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/v1/pi` | Yes | PI JSON-RPC handler. Agent invocation via RPC. |
-| POST | `/api/chat` | Yes | Send message, get response. Body: `{ message, agentId?, sessionKey? }` > `{ response }` |
+| POST | `/api/chat` | Yes | Send message, get response. Body: `{ message, agentId?, sessionKey?, thinking? }` > `{ response, thinking? }`. `thinking`: `high` \| `medium` \| `low` \| `none` (overrides per-agent config). |
 | POST | `/api/webhook/inbound` | Yes | Generic inbound webhook. Body: `{ message }` or `{ text }` or `{ prompt }` > agent run |
 
 ### Nodes
@@ -68,6 +68,12 @@ Headers: `X-Hyperclaw-Device` (optional device id for rate limiting).
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/nodes` | Yes | List connected mobile nodes. Returns `{ nodes: [{ nodeId, platform, capabilities, deviceName, connectedAt, lastSeenAt }] }` |
+
+### Terminal
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/terminal` | Yes | Run a shell command in the gateway's cwd. Body: `{ "command": "npm run build" }`. Returns `{ ok, code, stdout, stderr, user, hostname, cwd }`. Used by Web UI terminal panel. |
 
 ### Traces & costs
 

@@ -42,6 +42,8 @@ Shows: Gateway status, model, channels, skills, recent activity.
 
 Static HTML at `/dashboard`:
 
+**Dashboard v2** (planned): See [apps/web/DASHBOARD_V2.md](../apps/web/DASHBOARD_V2.md) — card layout, real-time charts, i18n, responsive mobile.
+
 - Gateway status (from `/api/status`)
 - Links to `/chat` and `/api/status`
 

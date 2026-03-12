@@ -154,6 +154,7 @@ Example for a private server:
 | `allowFrom` | string[] | [] | DM allowlist (Discord user IDs) |
 | `listenGuildIds` | string[] | [] | Guild IDs to listen in. Empty = all. |
 | `requireMentionInGuild` | boolean | true | Require @mention in guild channels |
+| `autoArchiveDuration` | number | 60 | Thread auto-archive duration (minutes). 60=1h, 1440=1d, 4320=3d, 10080=1w |
 | `commandPrefix` | string | `!` | Prefix for legacy commands |
 
 ### Env vars
