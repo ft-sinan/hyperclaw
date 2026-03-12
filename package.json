@@ -1,6 +1,6 @@
 {
   "name": "hyperclaw",
-  "version": "5.3.45",
+  "version": "5.3.5",
   "description": "⚡ HyperClaw — AI Gateway Platform. The Lobster Evolution 🦅",
   "main": "dist/run-main.js",
   "bin": {
@@ -45,16 +45,18 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:unit": "vitest run --config vitest.unit.config.ts",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:channels": "vitest run --config vitest.channels.config.ts",
-    "test:gateway": "vitest run --config vitest.gateway.config.ts",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:unit": "vitest run --config vitest.unit.config.mts",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "test:channels": "vitest run --config vitest.channels.config.mts",
+    "test:gateway": "vitest run --config vitest.gateway.config.mts",
+    "test:e2e": "vitest run --config vitest.e2e.config.mts",
     "typecheck": "tsc --noEmit",
     "packages:build": "tsc --noEmit -p packages/shared/tsconfig.json 2>/dev/null; tsc --noEmit -p packages/core/tsconfig.json 2>/dev/null; tsc --noEmit -p packages/gateway/tsconfig.json 2>/dev/null",
     "shared:build": "tsc --noEmit -p packages/shared/tsconfig.json",
     "gateway:build": "tsc --noEmit -p packages/gateway/tsconfig.json",
-    "test:packages": "vitest run --config vitest.unit.config.ts"
+    "test:packages": "vitest run --config vitest.unit.config.ts",
+    "check:mojibake": "node scripts/fix-mojibake.mjs",
+    "fix:mojibake": "node scripts/fix-mojibake.mjs --write"
   },
   "exports": {
     ".": "./dist/run-main.js",

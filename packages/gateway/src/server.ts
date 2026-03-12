@@ -364,7 +364,7 @@ export class GatewayServer {
 
     if (pathname === '/api/v1/check') {
       res.writeHead(200);
-      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.3.45' }));
+      res.end(JSON.stringify({ ok: true, service: 'hyperclaw', version: '5.3.5' }));
       return;
     }
 

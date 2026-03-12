@@ -2,7 +2,7 @@
 set -e
 
 echo ""
-echo "⚡ HyperClaw v5.3.45 — AI Gateway Platform"
+echo "⚡ HyperClaw v5.3.5 — AI Gateway Platform"
 echo "The Lobster Evolution 🦅"
 echo "==========================================="
 echo ""
@@ -41,7 +41,7 @@ echo "🔗 Installing globally..."
 npm install -g .
 
 echo ""
-echo "✅ HyperClaw v5.3.45 installed!"
+echo "✅ HyperClaw v5.3.5 installed!"
 echo ""
 echo "  Start setup:   hyperclaw onboard --install-daemon"
 echo "  Quick start:   hyperclaw quickstart"
