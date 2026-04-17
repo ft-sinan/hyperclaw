@@ -3,10 +3,10 @@
 # Run:     docker run -p 18789:18789 -v ~/.hyperclaw:/root/.hyperclaw hyperclaw
 
 FROM node:22-alpine AS builder
-
-WORKDIR /app
 COPY package.json ./
-RUN npm install --frozen-lockfile 2>/dev/null || npm install
+COPY scripts ./scripts
+RUN npm install --ignore-scripts || npm install --ignore-scripts
+
 COPY tsconfig.json ./
 COPY src ./src
 COPY static ./static
